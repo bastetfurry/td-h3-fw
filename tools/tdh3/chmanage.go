@@ -14,11 +14,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -369,7 +367,7 @@ func readMem(portName, file string) ([]byte, error) {
 			return nil, err
 		}
 	}
-	p, err := open(portName, 38400)
+	p, err := openClone(portName)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +436,7 @@ func changeChannels(portName, done string, build func(mem []byte) (chanEdits, er
 			return err
 		}
 	}
-	p, err := open(portName, 38400)
+	p, err := openClone(portName)
 	if err != nil {
 		return err
 	}
@@ -453,11 +451,8 @@ func changeChannels(portName, done string, build func(mem []byte) (chanEdits, er
 	if err != nil {
 		return err
 	}
-	path := filepath.Join("backups", "td-h3-"+time.Now().Format("20060102-150405")+".bin")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, append(bytes.Clone(ident), mem...), 0o644); err != nil {
+	path, err := saveBackup(ident, mem)
+	if err != nil {
 		return err
 	}
 	n, err := importBlocks(p, e, writable, func(m string, kv ...any) { logger.Debug(m, kv...) })

@@ -90,15 +90,14 @@ It also works on a radio with TIDRADIO's own firmware, without PC LINK.
 
 ### Backups tdh3 makes by itself
 
-These commands save the whole radio first, before they write anything:
-`tdh3 channels set`, `move`, `clear`, `lock`, `unlock` and `copy`.
+Every command that writes to the radio saves the whole radio first, before it writes anything:
+`tdh3 channels import`, `set`, `move`, `clear`, `lock`, `unlock` and `copy`, `tdh3 reset` and
+`tdh3 settings restore`.
 The file goes in a folder called `backups` inside the folder the terminal is in (it's made if it
 isn't there), named with the date and time: `backups/td-h3-20261114-153012.bin` was made on
-14 November 2026 at 15:30:12. The command prints the name when it's done. These files are ordinary
-backups: everything below works with them.
-
-`tdh3 channels import`, `tdh3 reset` and `tdh3 settings restore` **don't** save one. Run
-`tdh3 eeprom backup` before them if you might want things back.
+14 November 2026 at 15:30:12. Two in the same second get `-2`, `-3` after the time, so a backup is
+never replaced. The command prints the name. These files are ordinary backups: everything below
+works with them.
 
 ### Putting a backup back
 
@@ -131,15 +130,15 @@ More: [Saving and restoring your settings](Updating#saving-and-restoring-your-se
 |---|---|---|
 | `tdh3 channels list` | Shows your channels. `--slots 1-20` for some; `--file FILE.bin` reads a backup instead. | PC LINK, or `--file` |
 | `tdh3 channels export FILE.csv` | Saves them as a CHIRP CSV you can edit. `--slots` and `--file` as for `list`. | PC LINK, or `--file` |
-| `tdh3 channels import FILE.csv` | Loads a CHIRP CSV. `--dry-run` only shows what it would do; `--clear` empties channels not in the file. It saves no backup: run `tdh3 eeprom backup` first. | PC LINK |
+| `tdh3 channels import FILE.csv` | Loads a CHIRP CSV. `--dry-run` only shows what it would do; `--clear` empties channels not in the file. | PC LINK |
 | `tdh3 channels set CHANNELS` | Changes only what you give: `--name`, `--power`, `--bw`, `--rx`, `--duplex`, `--offset`, `--tone`, `--rx-tone`, `--tx-tone`, `--groups`, `--scan`. | PC LINK |
 | `tdh3 channels move FROM TO` | Moves a channel to an empty number. | PC LINK |
 | `tdh3 channels clear CHANNELS` | Empties channels. | PC LINK |
 | `tdh3 channels lock CHANNELS` | Stops channels ever transmitting. `unlock` makes them simplex again. | PC LINK |
 | `tdh3 channels copy FILE.bin` | Copies the whole channel list from a backup, this radio's or another's. `--fm=false` keeps this radio's FM presets. | PC LINK |
 
-`CHANNELS` can be a list and ranges, like `1-39,41,88-94`. `set`, `move`, `clear`, `lock`, `unlock`
-and `copy` save a backup first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)). More:
+`CHANNELS` can be a list and ranges, like `1-39,41,88-94`. Every command here that writes to the
+radio saves a backup first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)). More:
 [Changing channels from the computer](Channels-and-Scanning#changing-channels-from-the-computer).
 
 ![tdh3 channels list](img/term-channels.png)
@@ -204,9 +203,8 @@ Safety:
 - Only with my say-so: `tdh3 flash`, `tdh3 update`, `tdh3 reset`, `tdh3 settings restore`,
   `tdh3 channels clear`, `import`, `copy` or `lock`, and changing TX BANDS (item 13).
   A flash also needs me to hold PTT.
-- `tdh3 channels set`, `move`, `clear`, `lock`, `unlock` and `copy` save a backup in backups/
-  first. Before anything else that writes to it (`channels import`, `reset`, `settings restore`),
-  run `tdh3 eeprom backup FILE.bin` with a new file name.
+- Every command that writes to the radio saves a backup of it in backups/ first, and prints its
+  name. Tell me that name after any change.
 - Leave the radio as you found it: on the home screen, same channel, same settings.
 ```
 

@@ -39,8 +39,8 @@ downloaded ([Updating the firmware](Updating#get-the-flasher); type `.\tdh3.exe`
    ```bash
    tdh3 channels import mylist.csv
    ```
-   Import saves no backup of what the radio had: run `tdh3 eeprom backup my-radio.bin` first
-   if you might want it back.
+   Import saves what the radio had first, in a `backups` folder inside the folder the terminal
+   is in ([more on backups](The-tdh3-Program#backups)).
 3. **V/M** leaves PC LINK. While the computer is working it stays open however long that takes;
    after 10 minutes with nothing from the computer it closes by itself.
    If the computer wrote the radio's settings (a CHIRP Upload can), the radio restarts by itself

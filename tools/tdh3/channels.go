@@ -611,18 +611,23 @@ func runImport(portName, file string, wipe, dry bool) error {
 		return nil
 	}
 	es := plan(res.chans, wipe)
-	p, err := open(portName, 38400)
+	p, err := openClone(portName)
 	if err != nil {
 		return err
 	}
 	defer p.Close()
+	path, _, err := radioBackup(p)
+	if err != nil {
+		return err
+	}
+	okLine("backup saved: " + path)
 	for _, c := range res.chans {
 		logger.Info("channel", "n", c.loc, "name", c.name, "rx", mhz(c.rx), "tx", mhz(c.tx),
 			"rx_tone", c.rxTone.String(), "tx_tone", c.txTone.String(), "groups", groupList(c.groups))
 	}
 	written, err := importBlocks(p, es, writable, func(m string, kv ...any) { logger.Debug(m, kv...) })
 	if err != nil {
-		return fmt.Errorf("import stopped part-way (the radio may hold a mix of old and new channels; rerun to finish): %w", err)
+		return fmt.Errorf("import stopped part-way (the radio may hold a mix of old and new channels; rerun to finish, or put back its old memory from %s): %w", path, err)
 	}
 	cleared := 0
 	if wipe {

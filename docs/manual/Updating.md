@@ -225,8 +225,9 @@ save the old settings back).
 
 To empty the channel list too, so the radio starts completely fresh: `tdh3 reset --channels`.
 
-`tdh3 reset` saves no backup. To be able to go back, run `tdh3 eeprom backup my-radio-backup.bin`
-first ([below](#saving-and-restoring-your-settings)).
+`tdh3 reset` saves the whole radio first, in a `backups` folder inside the folder the terminal is
+in, and prints the file's name. To go back, put that file back
+([below](#saving-and-restoring-your-settings)).
 
 ## Saving and restoring your settings
 

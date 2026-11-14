@@ -82,7 +82,7 @@ func main() {
 					return err
 				}
 			}
-			p, err := open(port, 38400)
+			p, err := openClone(port)
 			if err != nil {
 				return err
 			}
@@ -135,7 +135,7 @@ func main() {
 			"channel, name and used/scan-list areas of the EEPROM, a 32-byte block at a time, and\n" +
 			"writes back only the blocks that changed. The factory TX calibration is never written.\n" +
 			"Locations outside 1-199 are skipped. G1..G8 in the Comment column set the scan groups.\n" +
-			"It saves no backup: run tdh3 eeprom backup first.",
+			"It saves the whole radio to backups/td-h3-DATE-TIME.bin in the current folder first.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return runImport(port, args[0], wipe, dry) },
 	}
@@ -167,8 +167,8 @@ func main() {
 		Long: "Over PC LINK (MENU, 4 6, MENU): clears the settings' check byte so the radio loads every\n" +
 			"default, and td-h3-fw restarts by itself to use them. Shows what it will do and waits for\n" +
 			"Enter. The memory channels stay unless --channels; the factory TX calibration is never\n" +
-			"written. It saves no backup: run tdh3 eeprom backup first. -p is found by itself when\n" +
-			"there is one radio cable.",
+			"written. It saves the whole radio to backups/td-h3-DATE-TIME.bin in the current folder\n" +
+			"first. -p is found by itself when there is one radio cable.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error { return runReset(port, resetCh, !yesReset) },
 	}
@@ -183,8 +183,8 @@ func main() {
 		Long: "Over PC LINK (MENU, 4 6, MENU): writes only the settings (0x1FC0-0x1FEF) from BACKUP.bin,\n" +
 			"which may come from another TD-H3, reads them back, and td-h3-fw restarts with them. Shows\n" +
 			"what it will do and waits for Enter. The memory channels and the factory TX calibration on\n" +
-			"the radio are never written. It saves no backup: run tdh3 eeprom backup first. -p is\n" +
-			"found by itself when there is one radio cable.",
+			"the radio are never written. It saves the whole radio to backups/td-h3-DATE-TIME.bin in\n" +
+			"the current folder first. -p is found by itself when there is one radio cable.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return runRestore(port, args[0], !yesRestore) },
 	}

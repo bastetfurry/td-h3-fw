@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // settingsMagics are the settings magics td-h3-fw loads (cfg_load moves 0xAB and 0xAC up).
@@ -63,6 +64,7 @@ func runRestore(portName, file string, ask bool) error {
 	row("restores", "every setting from "+valS.Render(file)+" (the menu, both slots' frequencies, the FM radio station)")
 	row("keeps", "the memory channels")
 	row("never", "the factory TX calibration")
+	row("backup", "the whole radio first, into "+valS.Render(backupDir+string(filepath.Separator)))
 	if ask {
 		end := watchStop()
 		err := enter(ambS.Render("Enter") + " restores" + noteS.Render(" (radio in PC LINK: MENU, 4 6, MENU), Ctrl-C stops"))
@@ -71,17 +73,19 @@ func runRestore(portName, file string, ask bool) error {
 			return err
 		}
 	}
-	p, err := open(portName, 38400)
+	p, err := openClone(portName)
 	if err != nil {
 		return err
 	}
 	defer p.Close()
+	path, _, err := radioBackup(p)
+	if err != nil {
+		return err
+	}
+	okLine("backup saved: " + path)
 	n, err := importBlocks(p, es, restoreWritable, func(m string, kv ...any) { logger.Debug(m, kv...) })
 	if err != nil {
-		if errors.Is(err, errNoHello) {
-			return errors.New("the radio didn't answer: put it in PC LINK first (MENU, 4 6, MENU), then run this again")
-		}
-		return err
+		return fmt.Errorf("stopped part-way; the radio's old memory is in %s: %w", path, pcLinkErr(err))
 	}
 	if n == 0 {
 		okLine("the radio already has these settings: nothing was written")

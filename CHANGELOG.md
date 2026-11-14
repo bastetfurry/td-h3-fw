@@ -10,7 +10,10 @@ starts with its part of this list.
   of the last sweeps under the bars. Its scale sets itself to the band's noise, the cursor's signal
   shows in dBm beside its frequency, and 5 switches to a slow sweep that catches short transmissions.
 - tdh3's help and messages give the right keys for PC LINK (MENU, 4 6, MENU), say where the
-  backups it saves by itself go, which commands save none, and how to put a backup back.
+  backups it saves by itself go and how to put a backup back.
+- `tdh3 channels import`, `tdh3 reset` and `tdh3 settings restore` now save a backup of the whole
+  radio first, like the other commands that change it. Two backups made in the same second no
+  longer share a name: the second gets `-2` after the time.
 
 ## 0.66.0
 

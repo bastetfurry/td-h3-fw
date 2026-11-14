@@ -10,7 +10,9 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -61,6 +63,7 @@ func runReset(portName string, channels, ask bool) error {
 		row("keeps", "the memory channels"+noteS.Render(" (--channels clears them too)"))
 	}
 	row("never", "the factory TX calibration")
+	row("backup", "the whole radio first, into "+valS.Render(backupDir+string(filepath.Separator)))
 	if ask {
 		end := watchStop()
 		err := enter(ambS.Render("Enter") + " resets" + noteS.Render(" (radio in PC LINK: MENU, 4 6, MENU), Ctrl-C stops"))
@@ -69,16 +72,18 @@ func runReset(portName string, channels, ask bool) error {
 			return err
 		}
 	}
-	p, err := open(portName, 38400)
+	p, err := openClone(portName)
 	if err != nil {
 		return err
 	}
 	defer p.Close()
-	if _, err := importBlocks(p, resetPlan(channels), resetWritable, func(m string, kv ...any) { logger.Debug(m, kv...) }); err != nil {
-		if errors.Is(err, errNoHello) {
-			return errors.New("the radio didn't answer: put it in PC LINK first (MENU, 4 6, MENU), then run this again")
-		}
+	path, _, err := radioBackup(p)
+	if err != nil {
 		return err
+	}
+	okLine("backup saved: " + path)
+	if _, err := importBlocks(p, resetPlan(channels), resetWritable, func(m string, kv ...any) { logger.Debug(m, kv...) }); err != nil {
+		return fmt.Errorf("stopped part-way; the radio's old memory is in %s: %w", path, pcLinkErr(err))
 	}
 	if channels {
 		okLine("channels cleared")

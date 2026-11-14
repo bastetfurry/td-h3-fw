@@ -214,7 +214,6 @@ func runCopy(portName, from string, fm, ask bool) error {
 		return errors.New("not a terminal to press Enter in: pass --yes")
 	}
 	spans := spansFor(fm)
-	backupPath := filepath.Join("backups", "td-h3-"+time.Now().Format("20060102-150405")+".bin")
 
 	say("")
 	row("from", valS.Render(filepath.Base(from))+noteS.Render(fmt.Sprintf("  %d channels", len(used))))
@@ -236,7 +235,7 @@ func runCopy(portName, from string, fm, ask bool) error {
 		say(noteS.Render(fmt.Sprintf("           %04X-%04X  %s", s.from, s.to-1, s.what)))
 	}
 	row("keeps", "every setting, the calibration, VFOs, keys, power-on message: all the rest")
-	row("backup", "this radio first, to "+valS.Render(backupPath))
+	row("backup", "this radio first, into "+valS.Render(backupDir+string(filepath.Separator))+noteS.Render(" (named by the date and time)"))
 	if ask {
 		end := watchStop()
 		err := enter(ambS.Render("Enter") + " copies" + noteS.Render(" (radio in PC LINK: MENU, 4 6, MENU), Ctrl-C stops"))
@@ -246,24 +245,22 @@ func runCopy(portName, from string, fm, ask bool) error {
 		}
 	}
 
-	p, err := open(portName, 38400)
+	p, err := openClone(portName)
 	if err != nil {
 		return err
 	}
 	defer p.Close()
 	sp := spin("reading this radio")
-	written, err := copySession(p, copyPlan(src, spans), spans, func(ident, mem []byte) error {
-		if err := os.MkdirAll(filepath.Dir(backupPath), 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(backupPath, append(bytes.Clone(ident), mem...), 0o644); err != nil {
+	var backupPath string
+	written, err := copySession(p, copyPlan(src, spans), spans, func(ident, mem []byte) (err error) {
+		if backupPath, err = saveBackup(ident, mem); err != nil {
 			return err
 		}
 		sp.set("writing the channels")
 		return nil
 	})
 	sp.stop()
-	if fileExists(backupPath) {
+	if backupPath != "" {
 		okLine("backup saved: " + backupPath)
 	}
 	if err != nil && written > 0 {
