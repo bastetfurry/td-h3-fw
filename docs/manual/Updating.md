@@ -18,6 +18,7 @@
 | Check the version afterwards | **MENU**, **5** **2** (VERSION) |
 | Back up the radio first | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 eeprom backup my-radio-backup.bin` |
 | Put every setting back to its default | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 reset` ([below](#putting-the-settings-back-to-defaults)) |
+| Put a whole backup back | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 restore my-radio-backup.bin` ([The tdh3 program](The-tdh3-Program#putting-a-backup-back)) |
 | Put my settings back from a backup | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 settings restore my-radio-backup.bin` ([below](#saving-and-restoring-your-settings)) |
 | Copy channels from another radio | [Channels and scanning](Channels-and-Scanning#copy-channels-from-another-radio): `tdh3 channels copy FILE` |
 | Get just the `.bin` files | `tdh3 firmware extract my-folder` saves both builds there |
@@ -248,8 +249,8 @@ or copy your settings onto a second TD-H3.
    settings from the backup. The last line on the computer says *the radio restarted with them*.
 
 Only the settings come back: the memory channels on the radio stay as they are, and the radio's
-own factory calibration is never written, even when the backup comes from another radio. To copy
-channels back from a backup, use `tdh3 channels copy my-radio-backup.bin`. Everything about backups,
+own factory calibration is never written, even when the backup comes from another radio. To put
+the whole backup back, channels, CALL ID and DTMF codes too, use `tdh3 restore my-radio-backup.bin`. Everything about backups,
 including the ones `tdh3` makes by itself: [The tdh3 program](The-tdh3-Program#backups). The messages and what to do about them are the
 same as for `tdh3 reset` above.
 

@@ -12,6 +12,7 @@ manages its channels and settings, and lets a computer see its screen and press 
 | See my channels | `tdh3 channels list` | PC LINK |
 | Change channels | `tdh3 channels set 88-94 --power low` | PC LINK |
 | Back up the radio | `tdh3 eeprom backup my-radio.bin` | PC LINK |
+| Put a whole backup back | `tdh3 restore my-radio.bin` | PC LINK |
 | Put my channels back from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
 | Put my settings back from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
@@ -32,8 +33,8 @@ type `.\tdh3.exe` on Windows and `./tdh3` on a Mac or Linux. See [Updating the f
 **Several radios plugged in?** Add `-p` and the port, like `-p /dev/ttyUSB1` or `-p COM5`. With one
 cable, `tdh3` finds it by itself.
 
-**Commands that change the radio ask first.** `tdh3 reset`, `tdh3 settings restore` and
-`tdh3 channels copy` show what they will do and wait for **Enter**; **Ctrl-C** stops. In a script,
+**Commands that change the radio ask first.** `tdh3 restore`, `tdh3 reset`, `tdh3 settings restore`
+and `tdh3 channels copy` show what they will do and wait for **Enter**; **Ctrl-C** stops. In a script,
 `--yes` (or `-y`) skips the question.
 
 **Every command explains itself.** `tdh3 --help` lists them, and `tdh3 channels set --help` shows
@@ -69,6 +70,7 @@ isn't needed for an update, but make one before you change a lot at once.
 |---|---|---|
 | `tdh3 eeprom backup FILE.bin` | Saves a backup to `FILE.bin`. It only reads: nothing on the radio changes. | PC LINK |
 | `tdh3 channels list --file FILE.bin` | Shows the channels in a backup. `channels export --file FILE.bin` saves them as a CSV. | Nothing |
+| `tdh3 restore FILE.bin` | Puts the whole backup back: channels, FM presets, settings, CALL ID and DTMF codes. Never the calibration. | PC LINK |
 | `tdh3 channels copy FILE.bin` | Puts the channels from a backup back (or onto another radio). `--fm=false` keeps this radio's FM presets. | PC LINK |
 | `tdh3 settings restore FILE.bin` | Puts the settings from a backup back (or onto another radio). The channels and calibration on the radio stay. | PC LINK |
 | `tdh3 reset` | Every setting back to its default. The channels stay; `--channels` empties them too. | PC LINK |
@@ -101,7 +103,21 @@ works with them.
 
 ### Putting a backup back
 
-Radio in PC LINK, then either or both:
+Radio in PC LINK, then:
+
+```bash
+tdh3 restore my-radio.bin
+```
+
+It reads the radio and lists what will change: the channels it adds, removes and changes (by
+number), the FM radio presets, the settings, the CALL ID and each stored DTMF code, old value then
+new. Press **Enter** to go on, or **Ctrl-C** to stop with nothing written. It saves the whole radio
+first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)), puts back everything in the
+list, and reads it back to check. If the settings changed, the radio restarts by itself with them.
+It works with a backup from another TD-H3 too, and refuses a backup that holds no settings of this
+firmware (one made on TIDRADIO's firmware, say).
+
+To put back only a part:
 
 ```bash
 tdh3 channels copy my-radio.bin
@@ -112,13 +128,11 @@ tdh3 settings restore my-radio.bin
 and the 25 FM radio presets, and replaces whatever channels the radio has now. It refuses a backup
 with no channels in it. `settings restore` puts back every menu setting and what slots A and B were
 tuned to; the radio restarts by itself with them. Each shows what it will do and waits for
-**Enter**, and reads back what it wrote to check it. Both work with a backup from another TD-H3.
+**Enter**, and reads back what it wrote to check it. Neither puts back the CALL ID or the DTMF
+codes: only `tdh3 restore` does.
 
-What a backup never puts back:
-
-- **The calibration.** Each radio's factory calibration is its own, so `tdh3` never writes it, not
-  even from that radio's own backup.
-- **The CALL ID and the stored DTMF codes.** Set them again on the radio, in the menu.
+What a backup never puts back is **the calibration**. Each radio's factory calibration is its own,
+so `tdh3` never writes it, not even from that radio's own backup.
 
 More: [Saving and restoring your settings](Updating#saving-and-restoring-your-settings),
 [Putting the settings back to defaults](Updating#putting-the-settings-back-to-defaults),
@@ -184,7 +198,7 @@ options run: tdh3 --help, and tdh3 COMMAND --help.
 
 How the radio connects:
 - REMOTE must be on for every `tdh3 remote` command.
-- PC LINK is needed for `tdh3 channels`, `eeprom`, `settings` and `reset`. To enter it run
+- PC LINK is needed for `tdh3 channels`, `eeprom`, `settings`, `restore` and `reset`. To enter it run
   `tdh3 remote keys MENU 4 6 MENU`, wait a few seconds, and try again if the radio doesn't
   answer at first. While it's in PC LINK, `tdh3 remote` won't answer. Ask me to press V/M
   on the radio to leave it.
@@ -200,7 +214,7 @@ Working the radio:
 
 Safety:
 - The radio refuses to transmit from the computer. Don't try to work around that.
-- Only with my say-so: `tdh3 flash`, `tdh3 update`, `tdh3 reset`, `tdh3 settings restore`,
+- Only with my say-so: `tdh3 flash`, `tdh3 update`, `tdh3 restore`, `tdh3 reset`, `tdh3 settings restore`,
   `tdh3 channels clear`, `import`, `copy` or `lock`, and changing TX BANDS (item 13).
   A flash also needs me to hold PTT.
 - Every command that writes to the radio saves a backup of it in backups/ first, and prints its

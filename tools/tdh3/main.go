@@ -9,6 +9,7 @@
 //	tdh3 channels copy -p /dev/ttyUSB1 radio1.bin
 //	tdh3 channels list -p /dev/ttyUSB1
 //	tdh3 channels set -p /dev/ttyUSB1 88-94 --power ulow
+//	tdh3 restore -p /dev/ttyUSB1 backups/td-h3-eeprom.bin
 //	tdh3 reset -p /dev/ttyUSB1
 //	tdh3 settings restore -p /dev/ttyUSB1 backups/td-h3-eeprom.bin
 //	tdh3 remote screen -p /dev/ttyUSB1 -o screen.png
@@ -71,8 +72,8 @@ func main() {
 		Short: "Read the whole EEPROM into FILE (read-only: never writes to the radio)",
 		Long: "Uses the clone protocol at 38400. Works with stock firmware, and with td-h3-fw once\n" +
 			"the radio is in PC LINK (MENU, 4 6, MENU). FILE is the 8-byte ident followed by\n" +
-			"the 8192 EEPROM bytes; a file of that name is replaced. Put it back with\n" +
-			"tdh3 channels copy FILE (the channels) and tdh3 settings restore FILE (the settings).\n" +
+			"the 8192 EEPROM bytes; a file of that name is replaced. Put it back with tdh3 restore FILE\n" +
+			"(all of it), or tdh3 channels copy FILE and tdh3 settings restore FILE (a part).\n" +
 			"-p is found by itself when there is one radio cable.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -190,6 +191,22 @@ func main() {
 	}
 	restore.Flags().BoolVarP(&yesRestore, "yes", "y", false, "don't wait for Enter")
 	settings.AddCommand(restore)
+
+	var yesWhole bool
+	whole := &cobra.Command{
+		Use:   "restore BACKUP.bin",
+		Short: "Put a whole backup back: channels, FM presets, settings, CALL ID, DTMF codes",
+		Long: "Over PC LINK (MENU, 4 6, MENU). Reads the radio, shows what will change and waits for Enter,\n" +
+			"saves the whole radio to backups/td-h3-DATE-TIME.bin in the current folder, then puts back\n" +
+			"from BACKUP.bin the channels 1-199 with their names, scan list and groups, the 25 FM radio\n" +
+			"presets, every menu setting with both slots, the CALL ID and the 8 stored DTMF codes, and\n" +
+			"reads them back. BACKUP.bin may come from another TD-H3. The factory TX calibration is never\n" +
+			"written. tdh3 channels copy and tdh3 settings restore put back only a part. -p is found by\n" +
+			"itself when there is one radio cable.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error { return runWholeRestore(port, args[0], !yesWhole) },
+	}
+	whole.Flags().BoolVarP(&yesWhole, "yes", "y", false, "don't wait for Enter")
 
 	var shot string
 	remote := &cobra.Command{
@@ -407,7 +424,7 @@ func main() {
 	ez.Flags().BoolVarP(&yes, "yes", "y", false, "for scripts: wait for the radio as long as it takes (several cables need -p)")
 	ez.Flags().BoolVar(&force, "force", false, "flash a build that isn't a tagged release (\"0.54.2-1\", \"+\")")
 
-	root.AddCommand(ez, eeprom, channels, reset, settings, firmware, remote, updateCmd(&port))
+	root.AddCommand(ez, eeprom, channels, whole, reset, settings, firmware, remote, updateCmd(&port))
 	root.Args, root.RunE = cobra.NoArgs, ez.RunE // no command (a double-click): flash
 	ver := "built from source"                   // a release flasher is the version of the firmware inside it
 	if img := builtIn(false); img != nil {

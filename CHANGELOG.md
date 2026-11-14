@@ -14,6 +14,8 @@ starts with its part of this list.
 - `tdh3 channels import`, `tdh3 reset` and `tdh3 settings restore` now save a backup of the whole
   radio first, like the other commands that change it. Two backups made in the same second no
   longer share a name: the second gets `-2` after the time.
+- New: `tdh3 restore BACKUP.bin` puts a whole backup back in one step: channels, FM presets,
+  settings, the CALL ID and the stored DTMF codes. It lists what will change and asks first.
 
 ## 0.66.0
 
