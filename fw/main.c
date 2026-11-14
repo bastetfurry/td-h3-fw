@@ -251,7 +251,9 @@ static const __code char *const __code lightv_s[] = {"10 s", "30 s", "ON"};
 // the list wraps, so it still reads 1-5 in order. The panel looks full from about 70 up (3, 4 and 5 at
 // 70, 120, 200 looked the same), so 1-4 sit under that, about 1.5x apart; stock's dim levels are 40-55.
 static const __code char *const __code bright_s[] = {"5", "1", "2", "3", "4"};
-static const __code uint8_t bright_duty[] = {200, 10, 20, 30, 45};
+// Every level lights the panel: measured on a radio, 30 of 200 shows nothing and 32 is lit; level 1 keeps
+// a margin over that (test_brightness refuses anything under 40).
+static const __code uint8_t bright_duty[] = {200, 40, 55, 75, 100};
 static const __code char *const __code apo_s[] = {"OFF", "30 min", "60 min", "120 min"};
 static const __code char *const __code off_on[] = {"OFF", "ON"};
 static const __code char *const __code comp_s[] = {"OFF", "RX", "TX", "BOTH"};

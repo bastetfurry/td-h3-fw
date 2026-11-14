@@ -4033,16 +4033,19 @@ def test_bell(cpu):                        # BELL: a call after 10 s of quiet ri
     assert not call(), 'rang with BELL off'
 
 
-def test_brightness(cpu):                  # BRIGHTNESS 5 -> 4: backlight duty 45 of 200 at once, after a timeout too, saved
+def test_brightness(cpu):                  # BRIGHTNESS 5 -> 4: backlight duty 100 of 200 at once, after a timeout too, saved
     assert cpu.xram[0xF140] == 200, 'an older settings block not at full brightness'
+    src = open(os.path.join(HERE, 'main.c')).read()
+    duty = [int(v) for v in re.search(r'bright_duty\[\] = \{([^}]*)\}', src).group(1).split(',')]
+    assert min(duty) >= 40, ('a BRIGHTNESS level under 40 of 200 leaves the screen black', duty)
     menu(cpu, 'BRIGHT', ['DOWN'])
-    assert cpu.xram[0xF140] == 45, ('not dimmed in the menu', cpu.xram[0xF140])
+    assert cpu.xram[0xF140] == 100, ('not dimmed in the menu', cpu.xram[0xF140])
     press(cpu, 'EXIT')
     menu(cpu, 'LIGHT', ['DOWN', 'EXIT'])   # 10 s
     cpu.run(11 * 800_000)
     assert cpu.xram[0xF140] == 0, 'backlight still on after its timeout'
     press(cpu, 'UP')
-    assert cpu.xram[0xF140] == 45, ('a key lit it at', cpu.xram[0xF140])
+    assert cpu.xram[0xF140] == 100, ('a key lit it at', cpu.xram[0xF140])
     cpu.run(3_000_000)                     # saved 2 s after the last change
     assert cpu.ee.mem[0x1FC8] & 7 == 4, cpu.ee.mem[0x1FC0:0x1FF0].hex()   # level 4 is stored as 4 (5 as 0)
 

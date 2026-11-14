@@ -3,6 +3,10 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
+## Next release
+
+- BRIGHTNESS 1 to 4 light the screen again: in the last two versions levels 1 to 3 left it black.
+
 ## 0.67.0
 
 - The scope (hold 3) colours each bar by strength, dark for the band's noise up to the brightest for
