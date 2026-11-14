@@ -79,7 +79,7 @@ func main() {
 			"the radio is in PC LINK (MENU, 4 6, MENU). FILE is the 8-byte ident followed by\n" +
 			"the 8192 EEPROM bytes. With no FILE it goes in backups/ in the current folder, named by\n" +
 			"the date and time (backups/td-h3-DATE-TIME.bin). A FILE that is already there is never\n" +
-			"replaced unless --force. Put it back with tdh3 restore FILE (all of it), or tdh3 channels\n" +
+			"replaced unless --force. Restore it with tdh3 restore FILE (all of it), or tdh3 channels\n" +
 			"copy FILE and tdh3 settings restore FILE (a part). -p is found by itself when there is one\n" +
 			"radio cable.",
 		Args: cobra.MaximumNArgs(1),
@@ -177,7 +177,7 @@ func main() {
 	var resetCh, yesReset bool
 	reset := &cobra.Command{
 		Use:   "reset",
-		Short: "Put every setting back to its default (the channels stay; --channels clears them too)",
+		Short: "Reset every setting to its default (the channels stay; --channels clears them too)",
 		Long: "Over PC LINK (MENU, 4 6, MENU): clears the settings' check byte so the radio loads every\n" +
 			"default, and td-h3-fw restarts by itself to use them. Shows what it will do and waits for\n" +
 			"Enter. The memory channels stay unless --channels; the factory TX calibration is never\n" +
@@ -193,7 +193,7 @@ func main() {
 	settings := &cobra.Command{Use: "settings", Short: "The radio's menu settings"}
 	restore := &cobra.Command{
 		Use:   "restore BACKUP.bin",
-		Short: "Put the settings from a `tdh3 eeprom backup` file back (the channels stay)",
+		Short: "Restore settings from a `tdh3 eeprom backup` file (the channels stay)",
 		Long: "Over PC LINK (MENU, 4 6, MENU): writes only the settings (0x1FC0-0x1FEF) from BACKUP.bin,\n" +
 			"which may come from another TD-H3, reads them back, and td-h3-fw restarts with them. Shows\n" +
 			"what it will do and waits for Enter. The memory channels and the factory TX calibration on\n" +
@@ -240,13 +240,13 @@ func main() {
 	var yesWhole bool
 	whole := &cobra.Command{
 		Use:   "restore BACKUP.bin",
-		Short: "Put a whole backup back: channels, FM presets, settings, CALL ID, DTMF codes",
+		Short: "Restore a backup to the radio: channels, FM presets, settings, CALL ID, DTMF codes",
 		Long: "Over PC LINK (MENU, 4 6, MENU). Reads the radio, shows what will change and waits for Enter,\n" +
-			"saves the whole radio to backups/td-h3-DATE-TIME.bin in the current folder, then puts back\n" +
+			"saves the whole radio to backups/td-h3-DATE-TIME.bin in the current folder, then restores\n" +
 			"from BACKUP.bin the channels 1-199 with their names, scan list and groups, the 25 FM radio\n" +
 			"presets, every menu setting with both slots, the CALL ID and the 8 stored DTMF codes, and\n" +
 			"reads them back. BACKUP.bin may come from another TD-H3. The factory TX calibration is never\n" +
-			"written. tdh3 channels copy and tdh3 settings restore put back only a part. -p is found by\n" +
+			"written. tdh3 channels copy and tdh3 settings restore cover only a part. -p is found by\n" +
 			"itself when there is one radio cable.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return runWholeRestore(port, args[0], !yesWhole) },

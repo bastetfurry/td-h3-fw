@@ -12,11 +12,11 @@ manages its channels and settings, and lets a computer see its screen and press 
 | See my channels | `tdh3 channels list` | PC LINK |
 | Change channels | `tdh3 channels set 88-94 --power low` | PC LINK |
 | Back up the radio | `tdh3 eeprom backup my-radio.bin` | PC LINK |
-| Put a whole backup back | `tdh3 restore my-radio.bin` | PC LINK |
+| Restore a backup to the radio | `tdh3 restore my-radio.bin` | PC LINK |
 | See the backups I have | `tdh3 backups` | Nothing |
 | See what changed since a backup | `tdh3 diff my-radio.bin` | PC LINK |
-| Put my channels back from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
-| Put my settings back from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
+| Restore channels from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
+| Restore settings from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
 | See all my settings | `tdh3 settings show` | PC LINK |
 | Change one setting | `tdh3 settings set POWER HIGH` | PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
@@ -77,10 +77,10 @@ isn't needed for an update, but make one before you change a lot at once.
 | `tdh3 diff A.bin B.bin` | Shows what differs between two backups: channels, FM presets, settings, CALL ID, DTMF codes. It only reads. | Nothing |
 | `tdh3 diff A.bin` | The same between a backup and the radio: what changed on the radio since the backup. | PC LINK |
 | `tdh3 channels list --file FILE.bin` | Shows the channels in a backup. `channels export --file FILE.bin` saves them as a CSV. | Nothing |
-| `tdh3 restore FILE.bin` | Puts the whole backup back: channels, FM presets, settings, CALL ID and DTMF codes. Never the calibration. | PC LINK |
-| `tdh3 channels copy FILE.bin` | Puts the channels from a backup back (or onto another radio). `--fm=false` keeps this radio's FM presets. | PC LINK |
-| `tdh3 settings restore FILE.bin` | Puts the settings from a backup back (or onto another radio). The channels and calibration on the radio stay. | PC LINK |
-| `tdh3 reset` | Every setting back to its default. The channels stay; `--channels` empties them too. | PC LINK |
+| `tdh3 restore FILE.bin` | Restores the whole backup: channels, FM presets, settings, CALL ID and DTMF codes. Never the calibration. | PC LINK |
+| `tdh3 channels copy FILE.bin` | Restores the channels from a backup (or puts them onto another radio). `--fm=false` keeps this radio's FM presets. | PC LINK |
+| `tdh3 settings restore FILE.bin` | Restores the settings from a backup (or puts them onto another radio). The channels and calibration on the radio stay. | PC LINK |
+| `tdh3 reset` | Resets every setting to its default. The channels stay; `--channels` empties them too. | PC LINK |
 
 ### Making a backup
 
@@ -151,7 +151,7 @@ Each channel line is its number, then what changed. Settings go by their menu na
 as the radio shows it. Give it one backup and it compares that with the radio (in PC LINK): what
 changed since the backup was made. It only reads; nothing on the radio changes.
 
-### Putting a backup back
+### Restoring a backup
 
 Radio in PC LINK, then:
 
@@ -162,30 +162,30 @@ tdh3 restore my-radio.bin
 It reads the radio and lists what will change: the channels it adds, removes and changes (by
 number), the FM radio presets, the settings by their menu name, the CALL ID and each stored DTMF
 code, old value then new. For every detail first, run `tdh3 diff my-radio.bin`. Press **Enter** to go on, or **Ctrl-C** to stop with nothing written. It saves the whole radio
-first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)), puts back everything in the
+first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)), restores everything in the
 list, and reads it back to check. If the settings changed, the radio restarts by itself with them.
 It works with a backup from another TD-H3 too, and refuses a backup that holds no settings of this
 firmware (one made on TIDRADIO's firmware, say).
 
-To put back only a part:
+To restore only a part:
 
 ```bash
 tdh3 channels copy my-radio.bin
 tdh3 settings restore my-radio.bin
 ```
 
-`channels copy` puts back channels 1-199 (frequencies, tones, power, names, scan list and groups)
+`channels copy` restores channels 1-199 (frequencies, tones, power, names, scan list and groups)
 and the 25 FM radio presets, and replaces whatever channels the radio has now. It refuses a backup
-with no channels in it. `settings restore` puts back every menu setting and what slots A and B were
+with no channels in it. `settings restore` restores every menu setting and what slots A and B were
 tuned to; the radio restarts by itself with them. Each shows what it will do and waits for
-**Enter**, and reads back what it wrote to check it. Neither puts back the CALL ID or the DTMF
+**Enter**, and reads back what it wrote to check it. Neither restores the CALL ID or the DTMF
 codes: only `tdh3 restore` does.
 
-What a backup never puts back is **the calibration**. Each radio's factory calibration is its own,
+What a backup never restores is **the calibration**. Each radio's factory calibration is its own,
 so `tdh3` never writes it, not even from that radio's own backup.
 
 More: [Saving and restoring your settings](Updating#saving-and-restoring-your-settings),
-[Putting the settings back to defaults](Updating#putting-the-settings-back-to-defaults),
+[Resetting every setting to its default](Updating#resetting-every-setting-to-its-default),
 [Copy channels from another radio](Channels-and-Scanning#copy-channels-from-another-radio).
 
 ## Channels
@@ -215,8 +215,8 @@ radio saves a backup first ([Backups tdh3 makes by itself](#backups-tdh3-makes-b
 |---|---|---|
 | `tdh3 settings show` | Lists every menu setting by its number and name, with its value as the menu shows it. `--file FILE.bin` reads a backup instead. It only reads. | PC LINK, or `--file` |
 | `tdh3 settings set NAME VALUE` | Changes one setting. It saves a backup first, reads the setting back, and the radio restarts with it. | PC LINK |
-| `tdh3 settings restore FILE.bin` | Puts every setting from a backup back ([Putting a backup back](#putting-a-backup-back)). | PC LINK |
-| `tdh3 reset` | Every setting back to its default. | PC LINK |
+| `tdh3 settings restore FILE.bin` | Restores every setting from a backup ([Restoring a backup](#restoring-a-backup)). | PC LINK |
+| `tdh3 reset` | Resets every setting to its default. | PC LINK |
 
 `NAME` is the setting's name as the menu shows it, in any case, with or without its spaces, or its
 menu number. `VALUE` is what the menu shows for it. Put a name or value with a space in quotes:

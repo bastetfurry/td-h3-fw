@@ -627,7 +627,7 @@ func runImport(portName, file string, wipe, dry bool) error {
 	}
 	written, err := importBlocks(p, es, writable, func(m string, kv ...any) { logger.Debug(m, kv...) })
 	if err != nil {
-		return fmt.Errorf("import stopped part-way (the radio may hold a mix of old and new channels; rerun to finish, or put back its old memory from %s): %w", path, err)
+		return fmt.Errorf("import stopped part-way (the radio may hold a mix of old and new channels; rerun to finish, or restore its old memory from %s): %w", path, err)
 	}
 	cleared := 0
 	if wipe {

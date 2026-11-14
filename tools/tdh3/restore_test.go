@@ -15,7 +15,7 @@ func TestRestoreSpansMissTheCalibration(t *testing.T) {
 	}
 }
 
-// restoreBits are the bits tdh3 restore puts back, written out by hand from fw/: channels copy's
+// restoreBits are the bits tdh3 restore restores, written out by hand from fw/: channels copy's
 // (copiedBits), the settings 1FC0-1FEF, CALL ID 1E00-1E07, DTMF codes 1830+16n, 7 bytes each.
 func restoreBits(a int) byte {
 	switch {

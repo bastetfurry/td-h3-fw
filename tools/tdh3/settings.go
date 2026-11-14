@@ -1,4 +1,4 @@
-// tdh3 settings restore: the settings from a `tdh3 eeprom backup` file put back over PC LINK; the
+// tdh3 settings restore: the settings from a `tdh3 eeprom backup` file restored over PC LINK; the
 // channels and the factory calibration stay as the radio has them.
 //
 // The settings are 0x1FC0-0x1FEF (cfg in fw/main.c). Only those bytes are edited: the second block,

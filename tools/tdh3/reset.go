@@ -1,4 +1,4 @@
-// tdh3 reset: every setting back to its default over PC LINK, the channels kept (--channels clears them too).
+// tdh3 reset: every setting reset to its default over PC LINK, the channels kept (--channels clears them too).
 //
 // It clears byte 0 of the settings' first block (0x1FC0), their magic: cfg_load (fw/main.c) loads
 // every default when it is wrong. td-h3-fw restarts after the E that ends a session that wrote that

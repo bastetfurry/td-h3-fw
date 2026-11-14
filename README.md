@@ -77,10 +77,10 @@ tdh3 backups                        # list the backups tdh3 saved by itself befo
 tdh3 diff my-radio.bin              # what changed on the radio since that backup
 tdh3 settings show                  # every menu setting and its value
 tdh3 settings set POWER HIGH        # change one setting by its menu name
-tdh3 restore my-radio.bin           # put the whole backup back (shows what changes first)
-tdh3 channels copy my-radio.bin     # put the channels from that backup back
-tdh3 settings restore my-radio.bin  # put the settings from that backup back
-tdh3 reset                          # every setting back to its default (the channels stay)
+tdh3 restore my-radio.bin           # restore the whole backup (shows what changes first)
+tdh3 channels copy my-radio.bin     # restore the channels from that backup
+tdh3 settings restore my-radio.bin  # restore the settings from that backup
+tdh3 reset                          # reset every setting to its default (the channels stay)
 ```
 
 (`tdh3` is the flasher you downloaded: `.\tdh3.exe` on Windows, `./tdh3` on a Mac or Linux.) What it

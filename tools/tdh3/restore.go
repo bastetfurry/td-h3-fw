@@ -1,4 +1,4 @@
-// tdh3 restore: a whole `tdh3 eeprom backup` put back in one step: the channels, the FM presets,
+// tdh3 restore: a whole `tdh3 eeprom backup` restored in one step: the channels, the FM presets,
 // the settings, the CALL ID and the stored DTMF codes. It is channels copy's session (copySession)
 // with more spans: only their bytes can change, every other byte of the block goes back as the
 // radio has it, and the factory calibration is in none of them.
@@ -30,7 +30,7 @@ var (
 	callSpan     = span{callAddr, callAddr + 8, 0xFF, "CALL ID"}
 )
 
-// restoreSpans are the bytes tdh3 restore puts back: the channels, the FM presets, the settings,
+// restoreSpans are the bytes tdh3 restore restores: the channels, the FM presets, the settings,
 // the CALL ID and the 8 DTMF codes.
 func restoreSpans() []span {
 	s := append(spansFor(true), settingsSpan, callSpan)
@@ -179,7 +179,7 @@ func runWholeRestore(portName, file string, ask bool) error {
 	}
 	if !slices.Contains(settingsMagics, src[cfgAddr]) {
 		return fmt.Errorf("%s holds no td-h3-fw settings (check byte %02X): nothing was written; "+
-			"tdh3 channels copy puts back only its channels", file, src[cfgAddr])
+			"tdh3 channels copy restores only its channels", file, src[cfgAddr])
 	}
 	if portName == "" {
 		if portName, err = findPort(); err != nil {

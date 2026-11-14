@@ -11,6 +11,8 @@ starts with its part of this list.
 - `tdh3 flash` shows a band scope under the tower while it flashes: a spectrum that fills from the
   left as the firmware goes on, over a waterfall. It needs a window at least 27 lines tall; in a
   smaller one the flasher looks as before.
+- tdh3's help and messages say "restore" and "reset" where they said "put back": `tdh3 restore` is
+  "Restore a backup to the radio", and `tdh3 reset` is "Reset every setting to its default".
 
 ## 0.67.1
 
@@ -25,11 +27,11 @@ starts with its part of this list.
   of the last sweeps under the bars. Its scale sets itself to the band's noise, the cursor's signal
   shows in dBm beside its frequency, and 5 switches to a slow sweep that catches short transmissions.
 - tdh3's help and messages give the right keys for PC LINK (MENU, 4 6, MENU), say where the
-  backups it saves by itself go and how to put a backup back.
+  backups it saves by itself go and how to restore a backup.
 - `tdh3 channels import`, `tdh3 reset` and `tdh3 settings restore` now save a backup of the whole
   radio first, like the other commands that change it. Two backups made in the same second no
   longer share a name: the second gets `-2` after the time.
-- New: `tdh3 restore BACKUP.bin` puts a whole backup back in one step: channels, FM presets,
+- New: `tdh3 restore BACKUP.bin` restores a whole backup in one step: channels, FM presets,
   settings, the CALL ID and the stored DTMF codes. It lists what will change and asks first.
 - New: `tdh3 backups` lists your backups with the date, firmware and channel count.
   `tdh3 eeprom backup` with no file name saves into the `backups` folder under the date and time,

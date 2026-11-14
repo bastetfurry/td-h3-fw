@@ -17,9 +17,9 @@
 | `no answer from flash mode` | Switch off, hold **PTT**, switch on again |
 | Check the version afterwards | **MENU**, **5** **2** (VERSION) |
 | Back up the radio first | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 eeprom backup my-radio-backup.bin` |
-| Put every setting back to its default | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 reset` ([below](#putting-the-settings-back-to-defaults)) |
-| Put a whole backup back | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 restore my-radio-backup.bin` ([The tdh3 program](The-tdh3-Program#putting-a-backup-back)) |
-| Put my settings back from a backup | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 settings restore my-radio-backup.bin` ([below](#saving-and-restoring-your-settings)) |
+| Reset every setting to its default | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 reset` ([below](#resetting-every-setting-to-its-default)) |
+| Restore a backup to the radio | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 restore my-radio-backup.bin` ([The tdh3 program](The-tdh3-Program#restoring-a-backup)) |
+| Restore settings from a backup | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 settings restore my-radio-backup.bin` ([below](#saving-and-restoring-your-settings)) |
 | Copy channels from another radio | [Channels and scanning](Channels-and-Scanning#copy-channels-from-another-radio): `tdh3 channels copy FILE` |
 | Get just the `.bin` files | `tdh3 firmware extract my-folder` saves both builds there |
 | Go back to TIDRADIO's firmware | `tdh3 firmware flash H3_250317.BIN` ([below](#going-back-to-tidradios-firmware)) |
@@ -201,9 +201,9 @@ flasher, which deletes it.
 
 If `tdh3 update` says the release **has no** file for your computer, your flasher is from v0.63 or v0.64, before the downloads were renamed. [Download the new flasher](#get-the-flasher) by hand this once; after that `tdh3 update` works again.
 
-## Putting the settings back to defaults
+## Resetting every setting to its default
 
-`tdh3 reset` puts every menu setting back the way it was when the firmware was new, with slots
+`tdh3 reset` resets every menu setting to the way it was when the firmware was new, with slots
 A and B on your first two channels. Your memory channels and FM radio presets stay. The radio's factory
 transmit calibration is never touched. Flashing doesn't do this: it keeps your settings.
 
@@ -229,12 +229,12 @@ save the old settings back).
 To empty the channel list too, so the radio starts completely fresh: `tdh3 reset --channels`.
 
 `tdh3 reset` saves the whole radio first, in a `backups` folder inside the folder the terminal is
-in, and prints the file's name. To go back, put that file back
+in, and prints the file's name. To go back, restore that file
 ([below](#saving-and-restoring-your-settings)).
 
 ## Saving and restoring your settings
 
-A backup holds every menu setting, so you can try things and put your own setup back in one go,
+A backup holds every menu setting, so you can try things and restore your own setup in one go,
 or copy your settings onto a second TD-H3.
 
 1. **Save them.** Radio in PC LINK (**MENU**, **4** **6**, **MENU**), then:
@@ -244,16 +244,16 @@ or copy your settings onto a second TD-H3.
    It says *saved*. The file is in the folder the terminal is in. Give each backup its own name:
    a file with the same name is never replaced (it says so and saves nothing). Press **V/M** on
    the radio when it's done.
-2. **Put them back, any time later.** Radio in PC LINK again, then:
+2. **Restore them, any time later.** Radio in PC LINK again, then:
    ```bash
    tdh3 settings restore my-radio-backup.bin
    ```
    It shows what it will do, then waits. Press **Enter**. The radio restarts by itself with the
    settings from the backup. The last line on the computer says *the radio restarted with them*.
 
-Only the settings come back: the memory channels on the radio stay as they are, and the radio's
-own factory calibration is never written, even when the backup comes from another radio. To put
-the whole backup back, channels, CALL ID and DTMF codes too, use `tdh3 restore my-radio-backup.bin`. Everything about backups,
+Only the settings are restored: the memory channels on the radio stay as they are, and the radio's
+own factory calibration is never written, even when the backup comes from another radio. To restore
+the whole backup, channels, CALL ID and DTMF codes too, use `tdh3 restore my-radio-backup.bin`. Everything about backups,
 including the ones `tdh3` makes by itself: [The tdh3 program](The-tdh3-Program#backups). The messages and what to do about them are the
 same as for `tdh3 reset` above.
 
