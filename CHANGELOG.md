@@ -3,7 +3,7 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
-## Next release
+## 0.67.0
 
 - The scope (hold 3) colours each bar by strength, dark for the band's noise up to the brightest for
   a strong station (navy to red in CLASSIC; each theme uses its own colours), and keeps a waterfall
