@@ -264,6 +264,9 @@ func progressBar(size int) func(float64) {
 	}
 }
 
+// clock is the numbers line's time (the manual's GIF runs its own).
+var clock = time.Now
+
 // progressFacts returns the numbers line after the percent: blocks, kilobytes, elapsed time and
 // time left, timed from its first call (the first block, not the wait for flash mode).
 func progressFacts(size int) func(float64) string {
@@ -271,9 +274,9 @@ func progressFacts(size int) func(float64) string {
 	var start time.Time
 	return func(f float64) string {
 		if start.IsZero() {
-			start = time.Now()
+			start = clock()
 		}
-		el := time.Since(start)
+		el := clock().Sub(start)
 		left := ""
 		if f > 0.02 && f < 1 {
 			left = fmt.Sprintf("  %s left", (time.Duration(float64(el)/f) - el).Round(time.Second))

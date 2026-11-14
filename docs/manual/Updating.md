@@ -135,7 +135,7 @@ and typing `tdh3 flash` do the same thing.
    reading of any signal. When it's all on, the tower turns green and a last wave goes out. The radio restarts
    into the new firmware, and once it answers the screen says it's running:
 
-   ![The flasher when it has finished](img/term-flash.png)
+   ![The flasher at work: it waits for PTT, the radio erases, the new firmware goes on, and the radio runs it](img/flash.gif)
 
    **Ctrl-C** stops it at any step. Before the radio starts erasing nothing on it has changed;
    after that it stays in flash mode with its screen dark, so run `tdh3 flash` again.

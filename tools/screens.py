@@ -405,7 +405,8 @@ def annotate():
 
 def terms():
     """tdh3's own output, from a real run in a pseudo-terminal, drawn cell by cell like a terminal.
-    The flash picture needs a radio, so a test draws its finished screen with the flasher's own code."""
+    A flash needs a radio, so tests draw its finished screen and the frames of the flash GIF with the
+    flasher's own code."""
     import fcntl
     import pty
     import re
@@ -510,7 +511,7 @@ def terms():
             return False
         return True
 
-    def draw(name, typed, text):
+    def render(typed, text):
         rows = ([{i: (c, (150, 150, 150), BLACK, False) for i, c in enumerate('$ ' + typed)}, {}] if typed else []) + cells(text)
         cols = max(max(r, default=0) for r in rows) + 1
         img = Image.new('RGB', (cols * w + 2 * pad, len(rows) * h + 2 * pad), BLACK)
@@ -522,13 +523,32 @@ def terms():
                     d.rectangle((x, y, x + w - 1, y + h - 1), fill=bg)
                 if ch != ' ' and not glyph(d, x, y, ch, fg):
                     d.text((x, y + 1), ch, fill=fg, font=font)
-        img.save(os.path.join(OUT, name + '.png'), optimize=True)
+        return img
+
+    def draw(name, typed, text):
+        render(typed, text).save(os.path.join(OUT, name + '.png'), optimize=True)
         print('docs/manual/img/%s.png' % name)
+
+    def flash_gif():                       # one palette for every frame, so frames store only what changed
+        import glob
+        frames = [render('tdh3 flash', open(f, encoding='utf-8', newline='').read())
+                  for f in sorted(glob.glob(os.path.join(RAW, 'flash-gif', '*.ans')))]
+        some = frames[::10] + frames[-1:]  # every stage's colours: the amber, the greys, the scope
+        sheet = Image.new('RGB', (frames[0].width, frames[0].height * len(some)))
+        for i, f in enumerate(some):
+            sheet.paste(f, (0, i * f.height))
+        pal = sheet.quantize(64, method=Image.Quantize.MEDIANCUT)
+        frames = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames[::2] + frames[-1:]]
+        ms = [200] * len(frames)           # every other frame: half the size, still the flash's pace
+        ms[-1] = 2000                      # the finished screen holds before it loops
+        frames[0].save(os.path.join(OUT, 'flash.gif'), save_all=True, append_images=frames[1:], duration=ms, loop=0, optimize=True)
+        print('docs/manual/img/flash.gif')
 
     draw('term-help', 'tdh3 --help', run('--help'))
     draw('term-channels', 'tdh3 channels list --file my-radio.bin', run('channels', 'list', '--file', 'my-radio.bin'))
     draw('term-set', 'tdh3 channels set --help', run('channels', 'set', '--help'))
     draw('term-flash', 'tdh3 flash', open(os.path.join(RAW, 'flash.ans'), encoding='utf-8', newline='').read())
+    flash_gif()
 
 
 if __name__ == '__main__':
