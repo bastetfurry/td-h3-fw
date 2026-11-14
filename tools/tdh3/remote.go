@@ -212,21 +212,29 @@ var keyHold, keyGap = 150 * time.Millisecond, 250 * time.Millisecond
 // one the radio answers; at the wrong speed a byte reads as noise there, which is no key. None:
 // 1 Mbaud, and the command says no answer.
 func openRemote(name string) (serial.Port, error) {
+	if p, ok, err := probeRemote(name, 400*time.Millisecond); ok || err != nil {
+		return p, err
+	}
+	return open(name, remoteBauds[0])
+}
+
+// probeRemote is the port at the speed REMOTE answers on within d; ok false when none does.
+func probeRemote(name string, d time.Duration) (serial.Port, bool, error) {
 	for _, baud := range remoteBauds {
 		p, err := open(name, baud)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		p.Write([]byte("S"))
-		if readUntil(p, sync, 400*time.Millisecond) {
+		if readUntil(p, sync, d) {
 			if baud == remoteBauds[0] {
 				keyHold, keyGap = 40*time.Millisecond, 60*time.Millisecond
 			}
-			return p, nil
+			return p, true, nil
 		}
 		p.Close()
 	}
-	return open(name, remoteBauds[0])
+	return nil, false, nil
 }
 
 // readUntil reads until pat has come in, or d has passed: false then.
@@ -616,15 +624,11 @@ func (r *rig) settings() ([]string, error) {
 	if _, err := r.home(); err != nil {
 		return nil, err
 	}
-	sc, err := r.key("MENU", func(sc *screen) bool { // the title with its counter, and the lit row under it
-		t, _ := sc.at(0, 0)
-		for k := range 6 {
-			if s, lit := sc.at(15+15*k, 0); lit && s != "" {
-				return strings.Contains(t, "/")
-			}
-		}
-		return false
-	})
+	open := func(sc *screen) bool { return menuItem(sc) > 0 && litRow(sc) != "" } // the title's counter, the lit row
+	sc, err := r.key("MENU", open)
+	if err == nil {
+		sc, err = r.sure(sc, open) // a slow redraw is read whole, never taken half drawn
+	}
 	if err != nil {
 		return nil, err
 	}

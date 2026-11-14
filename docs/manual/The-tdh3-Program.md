@@ -18,7 +18,7 @@ manages its channels and settings, and lets a computer see its screen and press 
 | Restore channels from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
 | Restore settings from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
 | See all my settings | `tdh3 settings show` | PC LINK |
-| Change one setting | `tdh3 settings set POWER HIGH` | PC LINK |
+| Change one setting | `tdh3 settings set POWER HIGH` | REMOTE on, or PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
 | Let an AI assistant use it | Paste the [prompt below](#using-it-with-an-ai-assistant) | REMOTE on |
 
@@ -214,7 +214,7 @@ radio saves a backup first ([Backups tdh3 makes by itself](#backups-tdh3-makes-b
 | Command | What it does | Radio needs |
 |---|---|---|
 | `tdh3 settings show` | Lists every menu setting by its number and name, with its value as the menu shows it. `--file FILE.bin` reads a backup instead. It only reads. | PC LINK, or `--file` |
-| `tdh3 settings set NAME VALUE` | Changes one setting. It saves a backup first, reads the setting back, and the radio restarts with it. | PC LINK |
+| `tdh3 settings set NAME VALUE` | Changes one setting. With REMOTE on, it works the radio's menu for you. In PC LINK, it saves a backup first, reads the setting back, and the radio restarts with it. | REMOTE on, or PC LINK |
 | `tdh3 settings restore FILE.bin` | Restores every setting from a backup ([Restoring a backup](#restoring-a-backup)). | PC LINK |
 | `tdh3 reset` | Resets every setting to its default. | PC LINK |
 
@@ -226,12 +226,35 @@ tdh3 settings set POWER HIGH
 tdh3 settings set "SCAN PAUSE" "5 s"
 tdh3 settings set 21 1,3
 tdh3 settings set "CALL ID" N0CALL
+tdh3 settings set "FREQ CAL" -- -1.5
 ```
 
 The last two set SCAN GROUP (item 21) to groups 1 and 3, and your callsign for CALL ID (`OFF`
-clears it). A value the setting can't take changes nothing and says which values it takes.
-MODE and OFFSET MHz can't be set this way: the radio keeps one for each slot (MODE) or band
-(OFFSET), so change those on the radio itself.
+clears it). A value below zero, like the last one's, goes after `--`. A value the setting can't take changes nothing and says which values it takes.
+
+**With REMOTE on** (no need for PC LINK), `tdh3` does on the radio what you would: it opens the
+menu, types the item's number, presses **MENU**, steps **UP** or **DOWN** to the value, presses
+**MENU** to keep it and **V/M** to go home. It reads the screen after every key and stops, saying
+what it saw, if a key didn't do what it should. So it works even when you can't read the screen,
+for example after turning the brightness all the way down:
+
+```bash
+tdh3 settings set BRIGHTNESS 10
+```
+
+It takes a few seconds, longer for a value far down a long list like the tones. Over REMOTE:
+
+- MODE and OFFSET MHz change for the selected slot (MODE) or its band (OFFSET MHz), as on the radio.
+- SCAN GROUP takes one group, or SCAN LIST. Pick several groups with GROUP LINK (item 26) on the
+  radio, or in PC LINK.
+- PRIORITY takes a channel that has something stored in it.
+- REMOTE OFF is refused, as it would cut the link halfway: turn REMOTE off on the radio.
+- No backup is saved: nothing is written but the one setting.
+- If it stops, the setting keeps the value the message names, and the radio goes back to its home
+  screen. Run the same command again to finish.
+
+**In PC LINK**, MODE and OFFSET MHz can't be set: the radio keeps one for each slot (MODE) or band
+(OFFSET), so turn REMOTE on, or change those on the radio itself.
 
 ```text
  1  SQUELCH      3
@@ -281,7 +304,8 @@ options run: tdh3 --help, and tdh3 COMMAND --help.
 
 How the radio connects:
 - REMOTE must be on for every `tdh3 remote` command.
-- PC LINK is needed for `tdh3 channels`, `eeprom`, `settings`, `restore` and `reset`. To enter it run
+- PC LINK is needed for `tdh3 channels`, `eeprom`, `settings show`, `settings restore`, `restore` and
+  `reset`. `tdh3 settings set` works with REMOTE on, or in PC LINK. To enter it run
   `tdh3 remote keys MENU 4 6 MENU`, wait a few seconds, and try again if the radio doesn't
   answer at first. While it's in PC LINK, `tdh3 remote` won't answer. Ask me to press V/M
   on the radio to leave it.
@@ -295,14 +319,16 @@ Working the radio:
 - `tdh3 remote settings` walks the whole menu and is slow. Use it only when you need every
   setting; to read one value, open that item by number and read the screen. In PC LINK,
   `tdh3 settings show` lists every setting at once.
+- To change one setting, use `tdh3 settings set NAME VALUE`: with REMOTE on it works the menu
+  itself and checks every key.
 
 Safety:
 - The radio refuses to transmit from the computer. Don't try to work around that.
 - Only with my say-so: `tdh3 flash`, `tdh3 update`, `tdh3 restore`, `tdh3 reset`, `tdh3 settings restore`,
   `tdh3 channels clear`, `import`, `copy` or `lock`, and changing TX BANDS (item 13).
   A flash also needs me to hold PTT.
-- Every command that writes to the radio saves a backup of it in backups/ first, and prints its
-  name. Tell me that name after any change.
+- Every command that writes to the radio in PC LINK saves a backup of it in backups/ first, and
+  prints its name. Tell me that name after any change.
 - Leave the radio as you found it: on the home screen, same channel, same settings.
 ```
 

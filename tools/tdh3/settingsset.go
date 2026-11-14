@@ -127,9 +127,9 @@ func (s setting) parseValue(v string) ([]edit, error) {
 		}
 		return es, nil
 	case kMode:
-		return nil, errors.New("MODE is kept for each slot: change it on the radio (MENU, 0 6)")
+		return nil, errors.New("MODE is kept for each slot: turn REMOTE on (MENU, 4 7) and run this again for the selected slot's, or change it on the radio (MENU, 0 6)")
 	case kOffset:
-		return nil, errors.New("OFFSET MHz is kept for each band: change it on the radio (MENU, 1 1)")
+		return nil, errors.New("OFFSET MHz is kept for each band: turn REMOTE on (MENU, 4 7) and run this again for the selected slot's band, or change it on the radio (MENU, 1 1)")
 	}
 	return nil, bad("a value")
 }
@@ -176,14 +176,21 @@ func runSet(portName, name, value string) error {
 	if err != nil {
 		return err
 	}
-	es, err := s.parseValue(value)
-	if err != nil {
-		return err
+	es, perr := s.parseValue(value)
+	if perr != nil && s.kind != kMode && s.kind != kOffset {
+		return perr
 	}
 	if portName == "" {
 		if portName, err = findPort(); err != nil {
 			return err
 		}
+	}
+	if r, ok := findRemote(portName); ok {
+		defer r.Close()
+		return remoteSet(r, s, value)
+	}
+	if perr != nil {
+		return perr
 	}
 	p, err := openClone(portName)
 	if err != nil {
@@ -191,6 +198,9 @@ func runSet(portName, name, value string) error {
 	}
 	defer p.Close()
 	path, mem, err := radioBackup(p)
+	if errors.Is(err, errNoHello) {
+		return errors.New("the radio answered neither REMOTE nor PC LINK: turn REMOTE on (MENU, 4 7, MENU, UP, MENU) or put it in PC LINK (MENU, 4 6, MENU), then run this again")
+	}
 	if err != nil {
 		return err
 	}

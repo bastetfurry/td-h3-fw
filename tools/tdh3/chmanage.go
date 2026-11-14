@@ -351,10 +351,19 @@ func exportCSV(w io.Writer, chans []channel) error {
 
 func pcLinkErr(err error) error {
 	if errors.Is(err, errNoHello) {
-		return errors.New("the radio didn't answer: put it in PC LINK first (MENU, 4 6, MENU), then run this again")
+		return hintErr{"the radio didn't answer: put it in PC LINK first (MENU, 4 6, MENU), then run this again", err}
 	}
 	return err
 }
+
+// hintErr says what to do about err, and still is err (errors.Is).
+type hintErr struct {
+	msg string
+	err error
+}
+
+func (e hintErr) Error() string { return e.msg }
+func (e hintErr) Unwrap() error { return e.err }
 
 // readMem is the EEPROM from a backup file, or from the radio in PC LINK.
 func readMem(portName, file string) ([]byte, error) {

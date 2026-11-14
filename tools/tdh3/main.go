@@ -226,21 +226,33 @@ func main() {
 		},
 	}
 	show.Flags().StringVar(&showFile, "file", "", "read this `tdh3 eeprom backup` file instead of the radio")
-	settings.AddCommand(show, &cobra.Command{
+	set := &cobra.Command{
 		Use:   "set NAME VALUE",
-		Short: "Change one menu setting over PC LINK, like: tdh3 settings set POWER HIGH",
+		Short: "Change one menu setting, like: tdh3 settings set POWER HIGH",
 		Long: "NAME is the menu name (any case, spaces optional: \"SCAN PAUSE\" or scanpause) or its menu\n" +
-			"number; VALUE as the menu shows it (tdh3 settings show lists both). Radio in PC LINK (MENU,\n" +
-			"4 6, MENU): it saves the whole radio to backups/td-h3-DATE-TIME.bin in the current folder,\n" +
-			"writes that one setting, reads it back, and td-h3-fw restarts with it. MODE and OFFSET MHz\n" +
-			"are kept for each slot and band: change those on the radio. -p is found by itself when there\n" +
-			"is one radio cable.\n" +
-			"  tdh3 settings set POWER HIGH\n" +
+			"number; VALUE as the menu shows it (tdh3 settings show lists both).\n" +
+			"With REMOTE on (MENU, 4 7), tdh3 works the radio's own menu: it opens the item by its number,\n" +
+			"steps UP or DOWN to the value, saves it with MENU and goes home, reading the screen after\n" +
+			"every key, so it works on a radio whose screen you can't see. MODE and OFFSET MHz set the\n" +
+			"selected slot's, as on the radio.\n" +
+			"In PC LINK (MENU, 4 6, MENU): it saves the whole radio to backups/td-h3-DATE-TIME.bin in the\n" +
+			"current folder, writes that one setting, reads it back, and td-h3-fw restarts with it. -p is\n" +
+			"found by itself when there is one radio cable.\n" +
+			"  tdh3 settings set BRIGHTNESS 10\n" +
 			"  tdh3 settings set \"SCAN PAUSE\" \"5 s\"\n" +
-			"  tdh3 settings set 21 1,3",
+			"  tdh3 settings set 21 1,3\n" +
+			"  tdh3 settings set \"FREQ CAL\" -- -1.5     (a value below zero goes after --)",
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, a []string) error { return runSet(port, a[0], a[1]) },
+	}
+	set.SetFlagErrorFunc(func(c *cobra.Command, err error) error { // FREQ CAL -1.5: the minus reads as a flag
+		if strings.Contains(err.Error(), "shorthand flag") {
+			return fmt.Errorf("%w: a value below zero goes after --, like: tdh3 settings set \"FREQ CAL\" -- -1.5", err)
+		}
+		return err
 	})
+	set.Flags().DurationVar(&remoteWait, "wait", remoteWait, "over REMOTE: how long a screen read waits for the radio to redraw")
+	settings.AddCommand(show, set)
 
 	var yesWhole bool
 	whole := &cobra.Command{

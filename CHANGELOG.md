@@ -20,6 +20,9 @@ starts with its part of this list.
   show "This is a command line tool" and close instead.
 - BRIGHTNESS: each step up is now visible. Before, levels 6 to 10 all looked the same; now 1 to 9
   climb in even steps and 10 is full.
+- `tdh3 settings set` works with REMOTE on, without PC LINK: it changes the setting on the radio's
+  own menu, reading the screen after every key, so `tdh3 settings set BRIGHTNESS 10` brings back a
+  screen you can't see. Over REMOTE it can also set MODE and OFFSET MHz for the selected slot.
 
 ## 0.67.1
 

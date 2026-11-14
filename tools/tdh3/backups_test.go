@@ -13,9 +13,10 @@ import (
 // openFake makes the clone commands talk to f instead of a serial port.
 func openFake(t *testing.T, f *fake) {
 	t.Helper()
-	old := openClone
+	old, oldR := openClone, findRemote
 	openClone = func(string) (clonePort, error) { return closer{f}, nil }
-	t.Cleanup(func() { openClone = old })
+	findRemote = func(string) (clonePort, bool) { return nil, false } // in PC LINK: REMOTE doesn't answer
+	t.Cleanup(func() { openClone, findRemote = old, oldR })
 }
 
 type closer struct{ *fake }
