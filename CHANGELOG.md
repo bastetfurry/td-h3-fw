@@ -3,7 +3,7 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
-## Next release
+## 0.67.1
 
 - BRIGHTNESS has 10 levels, and every one lights the screen: in the last two versions levels 1 to 3
   left it black. Each step looks about the same size, from 1 (dimmest) to 10 (full, the default).
