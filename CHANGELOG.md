@@ -19,6 +19,8 @@ starts with its part of this list.
 - New: `tdh3 backups` lists your backups with the date, firmware and channel count.
   `tdh3 eeprom backup` with no file name saves into the `backups` folder under the date and time,
   and it no longer replaces a file you already have unless you add `--force`.
+- New: `tdh3 diff` shows what differs between two backups, or between a backup and the radio:
+  channels added, removed and changed, FM presets, and settings by their menu name.
 
 ## 0.66.0
 

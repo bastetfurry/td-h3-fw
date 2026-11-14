@@ -74,6 +74,7 @@ tdh3 channels list                  # see your channels (also: export, set, move
 tdh3 channels set 88-94 --power low # change only what you give, on one channel or many
 tdh3 eeprom backup my-radio.bin     # save the radio's memory: channels and settings
 tdh3 backups                        # list the backups tdh3 saved by itself before each change
+tdh3 diff my-radio.bin              # what changed on the radio since that backup
 tdh3 restore my-radio.bin           # put the whole backup back (shows what changes first)
 tdh3 channels copy my-radio.bin     # put the channels from that backup back
 tdh3 settings restore my-radio.bin  # put the settings from that backup back

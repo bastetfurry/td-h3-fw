@@ -2,6 +2,7 @@
 //
 //	tdh3 eeprom backup  -p /dev/ttyUSB1 my-radio.bin
 //	tdh3 backups
+//	tdh3 diff backups/td-h3-20261114-153012.bin my-radio.bin
 //	tdh3 flash
 //	tdh3 update
 //	tdh3 firmware flash -p /dev/ttyUSB1 fw/build/td-h3-rx.bin
@@ -434,7 +435,7 @@ func main() {
 	ez.Flags().BoolVarP(&yes, "yes", "y", false, "for scripts: wait for the radio as long as it takes (several cables need -p)")
 	ez.Flags().BoolVar(&force, "force", false, "flash a build that isn't a tagged release (\"0.54.2-1\", \"+\")")
 
-	root.AddCommand(ez, eeprom, channels, whole, backupsCmd(), reset, settings, firmware, remote, updateCmd(&port))
+	root.AddCommand(ez, eeprom, channels, whole, backupsCmd(), diffCmd(&port), reset, settings, firmware, remote, updateCmd(&port))
 	root.Args, root.RunE = cobra.NoArgs, ez.RunE // no command (a double-click): flash
 	ver := "built from source"                   // a release flasher is the version of the firmware inside it
 	if img := builtIn(false); img != nil {

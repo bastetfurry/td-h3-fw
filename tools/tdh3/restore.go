@@ -148,7 +148,18 @@ func restoreLines(mem, src []byte) [][2]string {
 		add("FM", fmt.Sprintf("%d presets: %s", len(fm), numbers(fm)))
 	}
 	if spanDiffers(mem, src, settingsSpan) {
-		add("settings", "the menu settings, both slots and the FM radio station, as in the backup")
+		var names []string
+		for _, d := range diffMem(mem, src) {
+			for _, l := range d.lines {
+				if d.title == "settings" && l[0] != "CALL ID" && !strings.HasPrefix(l[0], "DTMF") {
+					names = append(names, l[0])
+				}
+			}
+		}
+		if names == nil || !hasSettings(mem) {
+			names = []string{"every setting, as in the backup"}
+		}
+		add("settings", strings.Join(names, ", "))
 	}
 	if a, b := callID(mem), callID(src); a != b {
 		add("CALL ID", offOr(a)+" -> "+offOr(b))

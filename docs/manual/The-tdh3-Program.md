@@ -14,6 +14,7 @@ manages its channels and settings, and lets a computer see its screen and press 
 | Back up the radio | `tdh3 eeprom backup my-radio.bin` | PC LINK |
 | Put a whole backup back | `tdh3 restore my-radio.bin` | PC LINK |
 | See the backups I have | `tdh3 backups` | Nothing |
+| See what changed since a backup | `tdh3 diff my-radio.bin` | PC LINK |
 | Put my channels back from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
 | Put my settings back from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
@@ -71,6 +72,8 @@ isn't needed for an update, but make one before you change a lot at once.
 |---|---|---|
 | `tdh3 eeprom backup FILE.bin` | Saves a backup to `FILE.bin`. It only reads: nothing on the radio changes. Leave out the name to save it in `backups`, named by the date and time. It never replaces a file already there; `--force` does. | PC LINK |
 | `tdh3 backups` | Lists the backups in the `backups` folder: when each was made, `td-h3-fw` if it holds this firmware's settings, and how many channels. | Nothing |
+| `tdh3 diff A.bin B.bin` | Shows what differs between two backups: channels, FM presets, settings, CALL ID, DTMF codes. It only reads. | Nothing |
+| `tdh3 diff A.bin` | The same between a backup and the radio: what changed on the radio since the backup. | PC LINK |
 | `tdh3 channels list --file FILE.bin` | Shows the channels in a backup. `channels export --file FILE.bin` saves them as a CSV. | Nothing |
 | `tdh3 restore FILE.bin` | Puts the whole backup back: channels, FM presets, settings, CALL ID and DTMF codes. Never the calibration. | PC LINK |
 | `tdh3 channels copy FILE.bin` | Puts the channels from a backup back (or onto another radio). `--fm=false` keeps this radio's FM presets. | PC LINK |
@@ -120,6 +123,32 @@ works with them.
 *Firmware* says `td-h3-fw` when the backup holds this firmware's settings, and `-` when it doesn't
 (a backup from TIDRADIO's firmware, say). A backup never records the version number.
 
+### Comparing backups
+
+`tdh3 diff` shows what differs between two backups, from the first to the second:
+
+```bash
+tdh3 diff backups/td-h3-20261101-090412.bin my-radio.bin
+```
+
+```text
+from       td-h3-20261101-090412.bin
+to         my-radio.bin
+
+channels
+  3   removed (was CALL     146.52000)
+  12  added: RPTR     146.94000
+  7   name HIKE -> TRAIL, power Low -> High
+
+settings
+  POWER    LOW -> HIGH
+  CALL ID  OFF -> N0CALL
+```
+
+Each channel line is its number, then what changed. Settings go by their menu name, with the value
+as the radio shows it. Give it one backup and it compares that with the radio (in PC LINK): what
+changed since the backup was made. It only reads; nothing on the radio changes.
+
 ### Putting a backup back
 
 Radio in PC LINK, then:
@@ -129,8 +158,8 @@ tdh3 restore my-radio.bin
 ```
 
 It reads the radio and lists what will change: the channels it adds, removes and changes (by
-number), the FM radio presets, the settings, the CALL ID and each stored DTMF code, old value then
-new. Press **Enter** to go on, or **Ctrl-C** to stop with nothing written. It saves the whole radio
+number), the FM radio presets, the settings by their menu name, the CALL ID and each stored DTMF
+code, old value then new. For every detail first, run `tdh3 diff my-radio.bin`. Press **Enter** to go on, or **Ctrl-C** to stop with nothing written. It saves the whole radio
 first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)), puts back everything in the
 list, and reads it back to check. If the settings changed, the radio restarts by itself with them.
 It works with a backup from another TD-H3 too, and refuses a backup that holds no settings of this
