@@ -12,3 +12,4 @@ stock/*
 docs/datasheets/*.pdf
 dist/
 tools/tdh3/builtin/
+tools/tdh3/*.syso

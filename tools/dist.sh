@@ -16,6 +16,9 @@ cp fw/build/td-h3-rx.bin dist/td-h3-fw-$ver-rx.bin
 # Each flasher carries both images (-tags release, builtin_release.go): one download flashes a radio.
 mkdir -p tools/tdh3/builtin
 cp fw/build/td-h3.bin fw/build/td-h3-rx.bin tools/tdh3/builtin/
+# tdh3.exe's icon (the flasher's tower), version details and manifest: a resource object the
+# Windows build links in by its name, made here from tools/tdh3/winres_test.go.
+(cd tools/tdh3 && TDH3_SYSO=tdh3_windows_amd64.syso TDH3_VERSION=$ver go test -count=1 -run '^TestWinres$' .)
 # Every flasher comes out of its download as tdh3 (tdh3.exe on Windows), and keeps its run permission:
 # a Mac drops it from a file downloaded on its own, and a tar keeps it, so Linux needs no chmod.
 for t in windows/amd64/tdh3.exe darwin/arm64/tdh3-macos-apple.zip darwin/amd64/tdh3-macos-intel.zip linux/amd64/tdh3-linux-x64.tar.gz linux/arm64/tdh3-linux-arm64.tar.gz; do
@@ -31,6 +34,7 @@ for t in windows/amd64/tdh3.exe darwin/arm64/tdh3-macos-apple.zip darwin/amd64/t
       rm dist/tdh3 ;;
   esac
 done
+rm tools/tdh3/tdh3_windows_amd64.syso
 # LICENSES.txt: the notices the firmware's and the flasher's licences ask to travel with binaries:
 # this project's MIT licence, NOTICE and the Apache-2.0 text (fw/bk4819.c), the fonts', and the
 # licence files of every Go module linked into the flasher.

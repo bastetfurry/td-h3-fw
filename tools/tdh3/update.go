@@ -248,11 +248,12 @@ func replaceExe(exe string, bin []byte, windows bool) error {
 	return os.Rename(f.Name(), exe)
 }
 
-// Every start on Windows deletes the flasher an update replaced (it fails, harmlessly, while that
-// one still runs: the flash an update starts).
+// A start on Windows after an update deletes the flasher it replaced, and only then: a start with
+// no tdh3.old.exe beside it touches no file. (It fails, harmlessly, while that one still runs: the
+// flash an update starts.)
 func init() {
 	if runtime.GOOS == "windows" {
-		if exe, err := os.Executable(); err == nil {
+		if exe, err := os.Executable(); err == nil && fileExists(oldExe(exe)) {
 			os.Remove(oldExe(exe))
 		}
 	}

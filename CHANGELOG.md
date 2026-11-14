@@ -5,6 +5,9 @@ starts with its part of this list.
 
 ## Next release
 
+- On Windows, `tdh3.exe` now has its own icon (the radio tower from the flasher) and shows its
+  version, maker and description under Properties > Details. A plain start no longer touches any
+  file next to it; the old copy that `tdh3 update` sets aside is removed on the next start, as before.
 - `tdh3` no longer fills a log with spinner frames when its output goes to a file or a pipe
   (`| tail`, a script, CI): each step shows once, like "... reading the radio", followed by its
   result. On a terminal it looks the same as before.
