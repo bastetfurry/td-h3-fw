@@ -15,6 +15,8 @@ starts with its part of this list.
   "Restore a backup to the radio", and `tdh3 reset` is "Reset every setting to its default".
 - Windows: double-clicking `tdh3.exe` opens the flasher every time. Before, a double-click could
   show "This is a command line tool" and close instead.
+- BRIGHTNESS: each step up is now visible. Before, levels 6 to 10 all looked the same; now 1 to 9
+  climb in even steps and 10 is full.
 
 ## 0.67.1
 

@@ -248,12 +248,13 @@ static const __code char *const __code resume_s[] = {"2 s", "3 s", "5 s", "HOLD"
 static const __code char *const __code save_s[] = {"OFF", "SHORT", "MIDDLE", "LONG"};   // as Icom: sleep 120, 240, 480 ms
 static const __code char *const __code tot_s[] = {"OFF", "030 s", "060 s", "120 s", "180 s"};
 static const __code char *const __code lightv_s[] = {"10 s", "30 s", "ON"};
-// BRIGHTNESS 1-10 as backlight PWM duty (of 200), each about 1.2-1.25x the last so every step looks the
-// same. 10 is stored as 0, so blocks from before it read full; the list wraps, so it still reads 1-10
-// in order. Every level lights the panel: on a radio, 30 of 200 showed a black screen and 32 was lit,
-// so level 1 is 32 (test_brightness refuses anything under 32).
+// BRIGHTNESS 1-10 as backlight PWM duty (of 200). 10 is stored as 0, so blocks from before it read
+// full; the list wraps, so it still reads 1-10 in order. Every level lights the panel: on a radio, 30
+// of 200 showed a black screen and 32 was lit, so level 1 is 32 (test_brightness refuses anything
+// under 32). The panel looks full well before 200: 89 already looked full, 72 did not. So 1-9 spread
+// from 32 to 80, each about 1.12x the last, for steps that look even, and 10 is full.
 static const __code char *const __code bright_s[] = {"10", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
-static const __code uint8_t bright_duty[] = {200, 32, 39, 48, 59, 72, 89, 109, 133, 163};
+static const __code uint8_t bright_duty[] = {200, 32, 36, 40, 45, 50, 56, 63, 71, 80};
 static const __code char *const __code apo_s[] = {"OFF", "30 min", "60 min", "120 min"};
 static const __code char *const __code off_on[] = {"OFF", "ON"};
 static const __code char *const __code comp_s[] = {"OFF", "RX", "TX", "BOTH"};
