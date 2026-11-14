@@ -3,6 +3,12 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
+## Next release
+
+- `tdh3` no longer fills a log with spinner frames when its output goes to a file or a pipe
+  (`| tail`, a script, CI): each step shows once, like "... reading the radio", followed by its
+  result. On a terminal it looks the same as before.
+
 ## 0.67.1
 
 - BRIGHTNESS has 10 levels, and every one lights the screen: in the last two versions levels 1 to 3

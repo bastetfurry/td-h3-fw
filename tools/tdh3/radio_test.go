@@ -230,7 +230,8 @@ func (b *bootSim) Read(p []byte) (int, error) {
 func flashSim(t *testing.T, b *bootSim) []string {
 	var buf bytes.Buffer
 	out = &buf
-	defer func() { out = os.Stderr }()
+	fakeTerm = true
+	defer func() { out, fakeTerm = os.Stderr, false }()
 	img := append([]byte{0x02, 0x00, 0x03}, make([]byte, 61)...)
 	done := make(chan error, 1)
 	go func() { _, err := flashSteps(b, img, !b.remote, b.remote); done <- err }()

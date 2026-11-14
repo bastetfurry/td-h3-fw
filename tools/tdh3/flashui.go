@@ -63,6 +63,11 @@ func spin(msg string) *spinner {
 		close(s.gone)
 		return s
 	}
+	if plain() { // a log or pipe: say the step once, no frames, no escape codes
+		s.say(msg)
+		go func() { <-s.quit; close(s.gone) }()
+		return s
+	}
 	go func() {
 		t := time.NewTicker(100 * time.Millisecond)
 		defer t.Stop()
@@ -90,6 +95,21 @@ func (s *spinner) set(msg string) {
 	s.msg.Store(msg)
 	if ui != nil {
 		ui.setStatus(msg, true)
+	} else if plain() {
+		s.say(msg)
+	}
+}
+
+// fakeTerm lets a test draw the spinner into a buffer as a terminal would.
+var fakeTerm bool
+
+// plain: out is a log or pipe, not a terminal.
+func plain() bool { return !fakeTerm && !isTerm(out) }
+
+// say prints a step as one plain line when out is not a terminal.
+func (s *spinner) say(msg string) {
+	if msg = ansi.Strip(msg); msg != "" {
+		fmt.Fprintln(out, "  ... "+msg)
 	}
 }
 
