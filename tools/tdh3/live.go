@@ -43,6 +43,8 @@ type live struct {
 	width    int // the window's: no line may wrap
 	height   int
 	room     int // lines for the steps and status
+	scopeW   int // the band scope's width under it all; 0: no room for it
+	sc       scope
 	quit     chan struct{}
 	gone     chan struct{}
 }
@@ -101,12 +103,18 @@ func startLive(sub string) {
 
 // fit lays the picture out for a w by h window; false if it's too small for one.
 func (u *live) fit(w, h int) bool {
-	u.width, u.height = w, h
+	u.width, u.height, u.scopeW = w, h, 0
 	switch {
 	case w >= scrW+4+56 && h >= scrRows+2: // beside (the numbers line is 56 wide): the screen's height is the whole picture
 		u.side, u.room = true, scrRows-1
+		if h >= scrRows+3+scopeRows { // the scope under both, as wide as they are
+			u.scopeW = scrW + 2 + 56
+		}
 	case w >= scrW+2 && h >= scrRows+2+stepRows: // under it
 		u.side, u.room = false, h-scrRows-2
+		if u.room >= stepRows+1+scopeRows { // the scope under the steps, as wide as the screen
+			u.scopeW, u.room = min(w-3, scrW), u.room-1-scopeRows
+		}
 	default: // shrunk mid-flash: under it, cut to fit
 		u.side, u.room = false, max(1, h-scrRows-2)
 		return false
@@ -273,6 +281,17 @@ func (u *live) draw() {
 		rows = append(rows, "")
 		for _, l := range text {
 			rows = append(rows, "  "+ansi.Truncate(l, u.width-3, ""))
+		}
+	}
+	if u.scopeW > 0 {
+		f := u.f
+		if u.st == stDone {
+			f = 1
+		}
+		u.sc.tick(u.scopeW, f)
+		rows = append(rows, "")
+		for _, l := range u.sc.rows(u.scopeW, f, u.st == stWrite) {
+			rows = append(rows, "  "+l)
 		}
 	}
 	drawn := u.drawn

@@ -130,7 +130,9 @@ and typing `tdh3 flash` do the same thing.
 4. The tower in the flasher's window acts out each step (the radio's own screen stays dark): waves out of the tip while it listens for
    the radio, a dim band wiping down the mast while the radio erases, then the mast filling amber
    from the ground up as the new firmware goes on (about 10 seconds; the percent and time left are
-   beside it). When it's all on, the tower turns green and a last wave goes out. The radio restarts
+   beside it). Under them a band scope, like a transceiver's, lights up from the left as the firmware
+   goes on, with a waterfall of the last moments below it; it's a picture of the progress, not a
+   reading of any signal. When it's all on, the tower turns green and a last wave goes out. The radio restarts
    into the new firmware, and once it answers the screen says it's running:
 
    ![The flasher when it has finished](img/term-flash.png)

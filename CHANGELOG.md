@@ -8,6 +8,9 @@ starts with its part of this list.
 - `tdh3` no longer fills a log with spinner frames when its output goes to a file or a pipe
   (`| tail`, a script, CI): each step shows once, like "... reading the radio", followed by its
   result. On a terminal it looks the same as before.
+- `tdh3 flash` shows a band scope under the tower while it flashes: a spectrum that fills from the
+  left as the firmware goes on, over a waterfall. It needs a window at least 27 lines tall; in a
+  smaller one the flasher looks as before.
 
 ## 0.67.1
 

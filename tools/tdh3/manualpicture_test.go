@@ -25,6 +25,9 @@ func TestManualPicture(t *testing.T) {
 	defer func() { out = os.Stderr; ui = nil }()
 	ui = &live{st: stDone, since: time.Now().Add(-time.Second), cap: caption(okS, "v"+ver+" running"), fd: ^uintptr(0)}
 	ui.fit(100, 40)
+	for range 2 * fallRows * fallEvery { // a full waterfall
+		ui.sc.tick(ui.scopeW, 1)
+	}
 	row("radio", noteS.Render("/dev/ttyUSB0"))
 	row("flashing", valS.Render("v"+ver)+"  "+noteS.Render("full (transmit)"))
 	row("image", noteS.Render(fmt.Sprintf("td-h3.bin  %d blocks  %.1f KB", (len(img)+31)/32, float64(len(img))/1024)))
