@@ -184,6 +184,14 @@ func offsetN(c []byte, uhf int) int { // main.c off_n
 
 func mhz50(n int) string { return fmt.Sprintf("%d.%02d", n*5/100, n*5%100) }
 
+func wxText(v int) string { // OFF, or WXv's frequency as freq_s shows it
+	if v == 0 {
+		return "OFF"
+	}
+	f := wxFreqs[v-1]
+	return fmt.Sprintf("%d.%03d", f/100000, f/100%1000)
+}
+
 func levelText(v int) string { // main.c level_s
 	if v > 9 {
 		return "S" + strconv.Itoa(v-9)
@@ -245,11 +253,7 @@ func (s setting) value(mem []byte) string {
 	case kTxb:
 		return txbText(s.list(c))
 	case kWx:
-		if v := s.list(c); v != 0 {
-			f := wxFreqs[v-1]
-			return fmt.Sprintf("%d.%03d", f/100000, f/100%1000)
-		}
-		return "OFF"
+		return wxText(s.list(c))
 	case kMode:
 		var out []string
 		for i, slot := range []string{"A", "B"} {

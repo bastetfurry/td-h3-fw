@@ -17,6 +17,8 @@ manages its channels and settings, and lets a computer see its screen and press 
 | See what changed since a backup | `tdh3 diff my-radio.bin` | PC LINK |
 | Put my channels back from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
 | Put my settings back from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
+| See all my settings | `tdh3 settings show` | PC LINK |
+| Change one setting | `tdh3 settings set POWER HIGH` | PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
 | Let an AI assistant use it | Paste the [prompt below](#using-it-with-an-ai-assistant) | REMOTE on |
 
@@ -207,6 +209,39 @@ radio saves a backup first ([Backups tdh3 makes by itself](#backups-tdh3-makes-b
 
 ![Every option of tdh3 channels set](img/term-set.png)
 
+## Settings
+
+| Command | What it does | Radio needs |
+|---|---|---|
+| `tdh3 settings show` | Lists every menu setting by its number and name, with its value as the menu shows it. `--file FILE.bin` reads a backup instead. It only reads. | PC LINK, or `--file` |
+| `tdh3 settings set NAME VALUE` | Changes one setting. It saves a backup first, reads the setting back, and the radio restarts with it. | PC LINK |
+| `tdh3 settings restore FILE.bin` | Puts every setting from a backup back ([Putting a backup back](#putting-a-backup-back)). | PC LINK |
+| `tdh3 reset` | Every setting back to its default. | PC LINK |
+
+`NAME` is the setting's name as the menu shows it, in any case, with or without its spaces, or its
+menu number. `VALUE` is what the menu shows for it. Put a name or value with a space in quotes:
+
+```bash
+tdh3 settings set POWER HIGH
+tdh3 settings set "SCAN PAUSE" "5 s"
+tdh3 settings set 21 1,3
+tdh3 settings set "CALL ID" N0CALL
+```
+
+The last two set SCAN GROUP (item 21) to groups 1 and 3, and your callsign for CALL ID (`OFF`
+clears it). A value the setting can't take changes nothing and says which values it takes.
+MODE and OFFSET MHz can't be set this way: the radio keeps one for each slot (MODE) or band
+(OFFSET), so change those on the radio itself.
+
+```text
+ 1  SQUELCH      3
+ 2  ATTENUATOR   OFF
+ ...
+ 9  POWER        HIGH
+11  OFFSET MHz   0.60 below 300 MHz, 5.00 from 300 MHz
+...
+```
+
 ## Remote control
 
 All of these need REMOTE on.
@@ -258,7 +293,8 @@ Working the radio:
 - In a menu item: MENU selects it, UP or DOWN changes the value, MENU confirms. Then press
   V/M ONCE to leave the menu. A second V/M switches the slot between frequency and memory mode.
 - `tdh3 remote settings` walks the whole menu and is slow. Use it only when you need every
-  setting; to read one value, open that item by number and read the screen.
+  setting; to read one value, open that item by number and read the screen. In PC LINK,
+  `tdh3 settings show` lists every setting at once.
 
 Safety:
 - The radio refuses to transmit from the computer. Don't try to work around that.

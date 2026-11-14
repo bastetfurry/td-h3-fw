@@ -21,6 +21,8 @@ starts with its part of this list.
   and it no longer replaces a file you already have unless you add `--force`.
 - New: `tdh3 diff` shows what differs between two backups, or between a backup and the radio:
   channels added, removed and changed, FM presets, and settings by their menu name.
+- New: `tdh3 settings show` lists every menu setting with its value, from the radio or a backup,
+  and `tdh3 settings set NAME VALUE` changes one, like `tdh3 settings set POWER HIGH`.
 
 ## 0.66.0
 
