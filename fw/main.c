@@ -21,10 +21,11 @@ typedef struct {
                                                                         // theme0: THEME before it had 9 (cfg_load moves it to theme)
     uint8_t pause:3, resume:3, digits:2;                                // 0x1FC6; digits: DIGITS, D_*
     uint8_t tot;
-    uint8_t bright:3, vmode:4, :1;          // 0x1FC8; vmode: each VFO's MOD_* (A bits 4:3, B 6:5), 0 = by band
+    uint8_t bright0:3, vmode:4, :1;         // 0x1FC8; vmode: each VFO's MOD_* (A bits 4:3, B 6:5), 0 = by band;
+                                            // bright0: BRIGHTNESS before it had 10 (cfg_load moves it to bright)
     uint8_t comp:2, tail:2, nar6:1, sstep:2, :1;   // 0x1FC9, read as bk_opt by bk4819.c and radio.c (BKO_* in fw.h); sstep: SSB's
     uint8_t off[2];                         // 0x1FCA: OFFSET under 300 MHz, then from 300 MHz up (off_n)
-    uint8_t theme:4, :4;                    // 0x1FCC: THEME
+    uint8_t theme:4, bright:4;              // 0x1FCC: THEME, BRIGHTNESS
     uint8_t act, prio, wx;
     uint8_t vox:4, voxd:3, :1;                                          // 0x1FD0: VOX 0 off or 1-9, VOX DELAY
     uint8_t txb, group;                     // txb: TX BANDS, bits HAM GMRS MURS FRS; group: bit g-1 = scan group g, 0 = scan list
@@ -247,13 +248,12 @@ static const __code char *const __code resume_s[] = {"2 s", "3 s", "5 s", "HOLD"
 static const __code char *const __code save_s[] = {"OFF", "SHORT", "MIDDLE", "LONG"};   // as Icom: sleep 120, 240, 480 ms
 static const __code char *const __code tot_s[] = {"OFF", "030 s", "060 s", "120 s", "180 s"};
 static const __code char *const __code lightv_s[] = {"10 s", "30 s", "ON"};
-// BRIGHTNESS 1-5 as backlight PWM duty (of 200). 5 is stored as 0, so blocks from before it read full;
-// the list wraps, so it still reads 1-5 in order. The panel looks full from about 70 up (3, 4 and 5 at
-// 70, 120, 200 looked the same), so 1-4 sit under that, about 1.5x apart; stock's dim levels are 40-55.
-static const __code char *const __code bright_s[] = {"5", "1", "2", "3", "4"};
-// Every level lights the panel: measured on a radio, 30 of 200 shows nothing and 32 is lit; level 1 keeps
-// a margin over that (test_brightness refuses anything under 40).
-static const __code uint8_t bright_duty[] = {200, 40, 55, 75, 100};
+// BRIGHTNESS 1-10 as backlight PWM duty (of 200), each about 1.2-1.25x the last so every step looks the
+// same. 10 is stored as 0, so blocks from before it read full; the list wraps, so it still reads 1-10
+// in order. Every level lights the panel: on a radio, 30 of 200 showed a black screen and 32 was lit,
+// so level 1 is 32 (test_brightness refuses anything under 32).
+static const __code char *const __code bright_s[] = {"10", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+static const __code uint8_t bright_duty[] = {200, 32, 39, 48, 59, 72, 89, 109, 133, 163};
 static const __code char *const __code apo_s[] = {"OFF", "30 min", "60 min", "120 min"};
 static const __code char *const __code off_on[] = {"OFF", "ON"};
 static const __code char *const __code comp_s[] = {"OFF", "RX", "TX", "BOTH"};
@@ -274,7 +274,7 @@ typedef struct { uint8_t off, n, def, bits; const __code char *const __code *lab
 static const __code item_t items[M_N] = {   // SQUELCH 0-9, then S1-S9 (10-18): the S-meter squelch
     [M_SQL] = {O(sql), 19, 3, 0x08, 0}, [M_TOT] = {O(tot), 5, 3, 0x08, tot_s}, [M_TXB] = {O(txb), 16, 3, 0x08, 0},
     [M_STEP] = {2, NSTEP, 6, 0x04, step_s}, [M_MIC] = {2, 10, 5, 0x44, 0},
-    [M_POW] = {3, 4, PWR_LOW, 0x02, pow_s}, [M_SHIFT] = {3, 4, 3, 0x22, shift_s}, [M_SAVE] = {3, 4, 2, 0x42, save_s}, [M_LIGHT] = {3, 3, 1, 0x62, lightv_s}, [M_BRIGHT] = {8, 5, 0, 0x03, bright_s},
+    [M_POW] = {3, 4, PWR_LOW, 0x02, pow_s}, [M_SHIFT] = {3, 4, 3, 0x22, shift_s}, [M_SAVE] = {3, 4, 2, 0x42, save_s}, [M_LIGHT] = {3, 3, 1, 0x62, lightv_s}, [M_BRIGHT] = {O(theme), 10, 0, 0x44, bright_s},
     [M_BW] = {4, 2, 0, 0x01, bw_s}, [M_ATT] = {4, 2, 0, 0x11, off_on}, [M_DW] = {4, 2, 1, 0x21, off_on}, [M_TAIL] = {9, 3, 0, 0x22, tail_s},
     [M_MODE] = {8, 3, 0, 0x32, mode_s},   // the selected slot's: A bits 4:3, B 6:5 (item_get adds 2 for B)
     [M_BEEP] = {4, 2, 1, 0x41, off_on}, [M_BT] = {4, 2, 0, 0x51, off_on}, [M_REM] = {4, 2, 0, 0x61, off_on}, [M_BELL] = {4, 2, 0, 0x71, off_on},
@@ -325,6 +325,7 @@ static void cfg_load(void)
                                             // (0x1FC4 bit 3) to tail's 1 (0x1FC9 bit 2); bytes, not bitfields: half the code
     if (cfg.magic == 0xAC) { cfg.power = pow_ac[cfg.power]; cfg.magic = CFG_MAGIC; }   // POWER gains MID, in order
     if (cfg.magic != CFG_MAGIC) xset(&cfg, 0, sizeof cfg);
+    if (cfg.bright0) { cfg.bright = cfg.bright0; cfg.bright0 = 0; }   // BRIGHTNESS from before it had 10: 1-4 stay 1-4
     if (cfg.theme0) { cfg.theme = cfg.theme0; cfg.theme0 = 0; }   // THEME from before it had 9   // defaults: all 0 (magic too, till the end), then what the checks put in
     for (i = 0; i < M_N; i++) if (items[i].n && (!cfg.magic || item_get(i) >= items[i].n)) item_set(i, items[i].def);
     FIX(cfg.act >= 2, act, 0); FIX(cfg.prio > 199, prio, 0); FIX((uint8_t)(cfg.fcal + 100) > 200, fcal, 0);

@@ -5,7 +5,9 @@ starts with its part of this list.
 
 ## Next release
 
-- BRIGHTNESS 1 to 4 light the screen again: in the last two versions levels 1 to 3 left it black.
+- BRIGHTNESS has 10 levels, and every one lights the screen: in the last two versions levels 1 to 3
+  left it black. Each step looks about the same size, from 1 (dimmest) to 10 (full, the default).
+  Your level stays as it was after the update.
 
 ## 0.67.0
 

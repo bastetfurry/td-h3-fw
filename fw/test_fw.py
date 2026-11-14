@@ -2868,7 +2868,7 @@ def test_remote_bytes_kept_in_redraw(cpu):   # uart1_isr keeps what lands while 
 
 def test_remote_up_one_step(cpu):          # a redraw slower than 200 ms ate both release bytes; the hold byte
     menu(cpu, 'REMOTE', ['UP', 'EXIT'])    # it left read late held UP past the 0.5 s repeat: THEME moved two
-    for item, row, vals in (('THEME', 'THEME', [t.split()[-1] for t in THEMES]), ('BRIGHT', 'BRIGHTNESS', '12345')):
+    for item, row, vals in (('THEME', 'THEME', [t.split()[-1] for t in THEMES]), ('BRIGHT', 'BRIGHTNESS', [str(i) for i in range(1, 11)])):
         menu(cpu, item)
         press(cpu, 'MENU')                 # change its value
         got = []
@@ -4033,21 +4033,46 @@ def test_bell(cpu):                        # BELL: a call after 10 s of quiet ri
     assert not call(), 'rang with BELL off'
 
 
-def test_brightness(cpu):                  # BRIGHTNESS 5 -> 4: backlight duty 100 of 200 at once, after a timeout too, saved
+BRIGHT_DUTY = [32, 39, 48, 59, 72, 89, 109, 133, 163, 200]   # BRIGHTNESS 1-10, backlight duty of 200
+
+
+def test_brightness(cpu):                  # every level drives the backlight at once; 4 after a timeout too, saved
     assert cpu.xram[0xF140] == 200, 'an older settings block not at full brightness'
     src = open(os.path.join(HERE, 'main.c')).read()
     duty = [int(v) for v in re.search(r'bright_duty\[\] = \{([^}]*)\}', src).group(1).split(',')]
-    assert min(duty) >= 40, ('a BRIGHTNESS level under 40 of 200 leaves the screen black', duty)
-    menu(cpu, 'BRIGHT', ['DOWN'])
-    assert cpu.xram[0xF140] == 100, ('not dimmed in the menu', cpu.xram[0xF140])
-    press(cpu, 'EXIT')
+    assert min(duty) >= 32, ('a BRIGHTNESS level under 32 of 200 leaves the screen black', duty)
+    assert duty == BRIGHT_DUTY[-1:] + BRIGHT_DUTY[:-1], duty   # 10 is stored as 0
+    menu(cpu, 'BRIGHT')
+    press(cpu, 'MENU')
+    for lvl in range(9, 0, -1):            # 10 down to 1
+        press(cpu, 'DOWN')
+        assert cpu.xram[0xF140] == BRIGHT_DUTY[lvl - 1], ('level', lvl, cpu.xram[0xF140])
+    keys(cpu, ['UP'] * 3 + ['MENU', 'EXIT'])   # 4
+    assert cpu.xram[0xF140] == 59, ('not level 4 in the menu', cpu.xram[0xF140])
     menu(cpu, 'LIGHT', ['DOWN', 'EXIT'])   # 10 s
     cpu.run(11 * 800_000)
     assert cpu.xram[0xF140] == 0, 'backlight still on after its timeout'
     press(cpu, 'UP')
-    assert cpu.xram[0xF140] == 100, ('a key lit it at', cpu.xram[0xF140])
+    assert cpu.xram[0xF140] == 59, ('a key lit it at', cpu.xram[0xF140])
     cpu.run(3_000_000)                     # saved 2 s after the last change
-    assert cpu.ee.mem[0x1FC8] & 7 == 4, cpu.ee.mem[0x1FC0:0x1FF0].hex()   # level 4 is stored as 4 (5 as 0)
+    assert cpu.ee.mem[0x1FCC] >> 4 == 4 and cpu.ee.mem[0x1FC8] & 7 == 0, cpu.ee.mem[0x1FC0:0x1FF0].hex()
+
+
+def test_brightness_old_block(cpu):        # a block from 5 levels (0x1FC8 bits 0-2: 0 full, 1-4) or garbage stays lit
+    cfg = rst_addr('_cfg')
+    for old, new in ((0, 10), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (7, 7)):
+        ee = bytearray(cpu.ee.mem)
+        ee[0x1FC8] = ee[0x1FC8] & ~7 | old
+        ee[0x1FCC] &= 15
+        cpu2 = boot(ee=ee)
+        assert cpu2.xram[0xF140] == BRIGHT_DUTY[new - 1], (old, cpu2.xram[0xF140])
+        assert cpu2.xram[cfg + 12] >> 4 == new % 10 and cpu2.xram[cfg + 8] & 7 == 0, (old, 'not moved to 0x1FCC')
+    for bad in (10, 15):                   # out of range in the new place: full
+        ee = bytearray(cpu.ee.mem)
+        ee[0x1FC8] &= ~7
+        ee[0x1FCC] = ee[0x1FCC] & 15 | bad << 4
+        cpu2 = boot(ee=ee)
+        assert cpu2.xram[0xF140] == 200, (bad, cpu2.xram[0xF140])
 
 
 def test_freq_cal(cpu):
@@ -4226,6 +4251,7 @@ INDEPENDENT = [
     ('scope: 2/8 move, 0 clears peaks, V/M leaves', test_scope_keys),
     ('frequency calibration', test_freq_cal),
     ('BRIGHTNESS dims the backlight, LIGHT timeout still works', test_brightness),
+    ('BRIGHTNESS from an older block lands on a lit level', test_brightness_old_block),
     ('BELL rings for a call after a quiet spell', test_bell),
     ('menu: VFO-only items say VFO on a memory channel', test_menu_vfo_items),
     ('menu: digits jump to an item', test_menu_digit_jump),

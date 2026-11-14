@@ -248,12 +248,13 @@ func TestSettingValuesReadAsTheMenuShowsThem(t *testing.T) {
 	c[23], c[24] = 13, 0  // RX TONE 100.0
 	c[25] = 51 + 104      // TX TONE D023I
 	c[10], c[11] = 0, 120 // OFFSET 0.60, 6.00
+	c[12] = 7 << 4        // BRIGHTNESS 7 (0x1FCC bits 4-7)
 	copy(mem[callAddr:], "N0CALL\x00\x00")
 	want := map[string]string{"SQUELCH": "S3", "POWER": "HIGH", "SHIFT": "+", "DUAL WATCH": "ON", "KEY BEEP": "ON",
 		"MODE": "A AM, B USB", "TX BANDS": "H G M", "WX ALERT": "162.550", "SCAN GROUP": "G13", "PRIORITY": "CH011",
 		"FREQ CAL": "-0.5 ppm", "BATT CAL": "+0.14 V", "METER CAL": "+0 dB", "RX TONE": "100.0", "TX TONE": "D023I",
 		"OFFSET MHz": "0.60 below 300 MHz, 6.00 from 300 MHz", "CALL ID": "N0CALL", "VOX": "OFF", "MIC GAIN": "0",
-		"STEP kHz": "2.5", "BRIGHTNESS": "5"}
+		"STEP kHz": "2.5", "BRIGHTNESS": "7"}
 	for _, s := range settingsTable {
 		if w, ok := want[s.name]; ok && s.value(mem) != w {
 			t.Errorf("%s = %q, want %q", s.name, s.value(mem), w)

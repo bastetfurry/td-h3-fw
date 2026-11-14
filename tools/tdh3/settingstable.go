@@ -56,7 +56,7 @@ var (
 	saveS   = []string{"OFF", "SHORT", "MIDDLE", "LONG"}
 	totS    = []string{"OFF", "030 s", "060 s", "120 s", "180 s"}
 	lightS  = []string{"10 s", "30 s", "ON"}
-	brightS = []string{"5", "1", "2", "3", "4"}
+	brightS = []string{"10", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 	apoS    = []string{"OFF", "30 min", "60 min", "120 min"}
 	offOn   = []string{"OFF", "ON"}
 	compS   = []string{"OFF", "RX", "TX", "BOTH"}
@@ -109,7 +109,7 @@ var settingsTable = []setting{
 	{num: 24, name: "DUAL WATCH", kind: kList, off: 4, shift: 2, width: 1, n: 2, def: 1, labels: offOn},
 	{num: 25, name: "PRIORITY", kind: kPrio, field: "prio", off: 14},
 	{num: 36, name: "LIGHT", kind: kList, off: 3, shift: 6, width: 2, n: 3, def: 1, labels: lightS},
-	{num: 37, name: "BRIGHTNESS", kind: kList, off: 8, shift: 0, width: 3, n: 5, def: 0, labels: brightS},
+	{num: 37, name: "BRIGHTNESS", kind: kList, field: "bright", off: 12, shift: 4, width: 4, n: 10, def: 0, labels: brightS},
 	{num: 38, name: "THEME", kind: kList, field: "theme", off: 12, shift: 0, width: 4, n: 9, def: 0, labels: themeS},
 	{num: 39, name: "DIGITS", kind: kList, off: 6, shift: 6, width: 2, n: 3, def: 0, labels: digitsS},
 	{num: 40, name: "KEY BEEP", kind: kList, off: 4, shift: 4, width: 1, n: 2, def: 1, labels: offOn},
