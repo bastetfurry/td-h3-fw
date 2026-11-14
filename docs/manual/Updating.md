@@ -225,6 +225,9 @@ save the old settings back).
 
 To empty the channel list too, so the radio starts completely fresh: `tdh3 reset --channels`.
 
+`tdh3 reset` saves no backup. To be able to go back, run `tdh3 eeprom backup my-radio-backup.bin`
+first ([below](#saving-and-restoring-your-settings)).
+
 ## Saving and restoring your settings
 
 A backup holds every menu setting, so you can try things and put your own setup back in one go,
@@ -234,7 +237,8 @@ or copy your settings onto a second TD-H3.
    ```bash
    tdh3 eeprom backup my-radio-backup.bin
    ```
-   Press **V/M** on the radio when it's done.
+   It says *saved*. The file is in the folder the terminal is in; a file with the same name is
+   replaced, so give each backup its own name. Press **V/M** on the radio when it's done.
 2. **Put them back, any time later.** Radio in PC LINK again, then:
    ```bash
    tdh3 settings restore my-radio-backup.bin
@@ -244,14 +248,21 @@ or copy your settings onto a second TD-H3.
 
 Only the settings come back: the memory channels on the radio stay as they are, and the radio's
 own factory calibration is never written, even when the backup comes from another radio. To copy
-channels from a backup, use `tdh3 channels copy`. The messages and what to do about them are the
+channels back from a backup, use `tdh3 channels copy my-radio-backup.bin`. Everything about backups,
+including the ones `tdh3` makes by itself: [The tdh3 program](The-tdh3-Program#backups). The messages and what to do about them are the
 same as for `tdh3 reset` above.
 
 ## Going back to TIDRADIO's firmware
 
 Download the TD-H3 firmware from TIDRADIO's firmware page,
 https://tidradio.com/pages/tidradio-firmware, and unzip it: it holds `H3_250317.BIN`. Put that file
-beside the flasher, open a terminal there, and run:
+beside the flasher and open a terminal there.
+
+**Back up first** (**MENU**, **4** **6** (PC LINK), **MENU**, then):
+```bash
+tdh3 eeprom backup my-radio-backup.bin
+```
+This only reads: it never writes to the radio. Then flash it:
 
 ```bash
 tdh3 firmware flash H3_250317.BIN
@@ -260,9 +271,3 @@ tdh3 firmware flash H3_250317.BIN
 It starts as soon as it finds the radio, and asks you to switch the
 radio off and on holding **PTT** as in step 3. It ends on an amber line (**the radio didn't
 answer**): that's normal, because TIDRADIO's firmware doesn't talk back over the cable.
-
-**Back up first** (**MENU**, **4** **6** (PC LINK), **MENU**, then):
-```bash
-tdh3 eeprom backup my-radio-backup.bin
-```
-This only reads: it never writes to the radio.

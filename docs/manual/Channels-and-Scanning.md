@@ -39,6 +39,8 @@ downloaded ([Updating the firmware](Updating#get-the-flasher); type `.\tdh3.exe`
    ```bash
    tdh3 channels import mylist.csv
    ```
+   Import saves no backup of what the radio had: run `tdh3 eeprom backup my-radio.bin` first
+   if you might want it back.
 3. **V/M** leaves PC LINK. While the computer is working it stays open however long that takes;
    after 10 minutes with nothing from the computer it closes by itself.
    If the computer wrote the radio's settings (a CHIRP Upload can), the radio restarts by itself
@@ -82,7 +84,8 @@ once. Put the radio in PC LINK first: **MENU**, type **4** **6**, **MENU**. **V/
 
 Channel numbers can be a list and ranges, like `1-39,41,88-94`. Only what you ask for changes; everything
 else about a channel stays. Before changing anything `tdh3` saves the radio's whole memory to a dated
-file in `backups/`, and it reads back what it wrote. If one channel in the list is empty or a value is
+file in a `backups` folder inside the folder the terminal is in
+([more on backups](The-tdh3-Program#backups)), and it reads back what it wrote. If one channel in the list is empty or a value is
 wrong, it says so and changes nothing at all. `list` and `export` also read a backup file: add
 `--file my-radio-backup.bin`, no radio needed.
 

@@ -70,8 +70,10 @@ func main() {
 		Use:   "backup FILE",
 		Short: "Read the whole EEPROM into FILE (read-only: never writes to the radio)",
 		Long: "Uses the clone protocol at 38400. Works with stock firmware, and with td-h3-fw once\n" +
-			"the radio is in PC LINK (MENU, 4 5, MENU). FILE is the 8-byte ident followed by\n" +
-			"the 8192 EEPROM bytes. -p is found by itself when there is one radio cable.",
+			"the radio is in PC LINK (MENU, 4 6, MENU). FILE is the 8-byte ident followed by\n" +
+			"the 8192 EEPROM bytes; a file of that name is replaced. Put it back with\n" +
+			"tdh3 channels copy FILE (the channels) and tdh3 settings restore FILE (the settings).\n" +
+			"-p is found by itself when there is one radio cable.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if port == "" { // one radio cable plugged in: use it
@@ -132,7 +134,8 @@ func main() {
 		Long: "Reads FILE (columns found by header name), checks every row, then patches only the\n" +
 			"channel, name and used/scan-list areas of the EEPROM, a 32-byte block at a time, and\n" +
 			"writes back only the blocks that changed. The factory TX calibration is never written.\n" +
-			"Locations outside 1-199 are skipped. G1..G8 in the Comment column set the scan groups.",
+			"Locations outside 1-199 are skipped. G1..G8 in the Comment column set the scan groups.\n" +
+			"It saves no backup: run tdh3 eeprom backup first.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return runImport(port, args[0], wipe, dry) },
 	}
@@ -144,7 +147,8 @@ func main() {
 		Use:   "copy FROM.bin",
 		Short: "Copy another TD-H3's channel list (its eeprom backup file) onto this radio",
 		Long: "FROM.bin is a `tdh3 eeprom backup` of the radio to copy from. Shows what it will do and\n" +
-			"waits for Enter, saves a backup of this radio to backups/, then writes only the channel\n" +
+			"waits for Enter, saves a backup of this radio to backups/td-h3-DATE-TIME.bin in the\n" +
+			"current folder, then writes only the channel\n" +
 			"records, names, used and scan-list bitmaps (and with --fm, on by default, the FM presets),\n" +
 			"and reads them back to check. Settings and calibration are never written. -p is found\n" +
 			"by itself when there is one radio cable.",
@@ -160,10 +164,11 @@ func main() {
 	reset := &cobra.Command{
 		Use:   "reset",
 		Short: "Put every setting back to its default (the channels stay; --channels clears them too)",
-		Long: "Over PC LINK (MENU, 4 5, MENU): clears the settings' check byte so the radio loads every\n" +
+		Long: "Over PC LINK (MENU, 4 6, MENU): clears the settings' check byte so the radio loads every\n" +
 			"default, and td-h3-fw restarts by itself to use them. Shows what it will do and waits for\n" +
 			"Enter. The memory channels stay unless --channels; the factory TX calibration is never\n" +
-			"written. -p is found by itself when there is one radio cable.",
+			"written. It saves no backup: run tdh3 eeprom backup first. -p is found by itself when\n" +
+			"there is one radio cable.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error { return runReset(port, resetCh, !yesReset) },
 	}
@@ -175,10 +180,11 @@ func main() {
 	restore := &cobra.Command{
 		Use:   "restore BACKUP.bin",
 		Short: "Put the settings from a `tdh3 eeprom backup` file back (the channels stay)",
-		Long: "Over PC LINK (MENU, 4 5, MENU): writes only the settings (0x1FC0-0x1FEF) from BACKUP.bin,\n" +
+		Long: "Over PC LINK (MENU, 4 6, MENU): writes only the settings (0x1FC0-0x1FEF) from BACKUP.bin,\n" +
 			"which may come from another TD-H3, reads them back, and td-h3-fw restarts with them. Shows\n" +
 			"what it will do and waits for Enter. The memory channels and the factory TX calibration on\n" +
-			"the radio are never written. -p is found by itself when there is one radio cable.",
+			"the radio are never written. It saves no backup: run tdh3 eeprom backup first. -p is\n" +
+			"found by itself when there is one radio cable.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return runRestore(port, args[0], !yesRestore) },
 	}

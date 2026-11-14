@@ -12,6 +12,8 @@ manages its channels and settings, and lets a computer see its screen and press 
 | See my channels | `tdh3 channels list` | PC LINK |
 | Change channels | `tdh3 channels set 88-94 --power low` | PC LINK |
 | Back up the radio | `tdh3 eeprom backup my-radio.bin` | PC LINK |
+| Put my channels back from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
+| Put my settings back from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
 | Let an AI assistant use it | Paste the [prompt below](#using-it-with-an-ai-assistant) | REMOTE on |
 
@@ -30,8 +32,12 @@ type `.\tdh3.exe` on Windows and `./tdh3` on a Mac or Linux. See [Updating the f
 **Several radios plugged in?** Add `-p` and the port, like `-p /dev/ttyUSB1` or `-p COM5`. With one
 cable, `tdh3` finds it by itself.
 
+**Commands that change the radio ask first.** `tdh3 reset`, `tdh3 settings restore` and
+`tdh3 channels copy` show what they will do and wait for **Enter**; **Ctrl-C** stops. In a script,
+`--yes` (or `-y`) skips the question.
+
 **Every command explains itself.** `tdh3 --help` lists them, and `tdh3 channels set --help` shows
-every option of one command.
+every option of one command. `tdh3 --version` says which version you have.
 
 ![tdh3 --help](img/term-help.png)
 
@@ -43,40 +49,97 @@ PC LINK looks like this on the radio, and REMOTE like this once it's on:
 
 | Command | What it does | Radio needs |
 |---|---|---|
-| `tdh3 flash` | Puts on the firmware this flasher carries. `--rx` for the receive-only build. | Hold **PTT** when it asks |
+| `tdh3 flash` | Puts on the firmware this flasher carries. `--rx` for the receive-only build; `--yes` waits for the radio without asking (for scripts); `--force` flashes a test build that isn't a release. Typing just `tdh3` does the same. | Hold **PTT** when it asks |
 | `tdh3 update` | Downloads the newest flasher, checks its signature, replaces itself, then flashes. `--no-flash` stops before the flash. | Internet |
-| `tdh3 firmware flash FILE.bin` | Flashes a firmware file you have. | Hold **PTT** when it asks |
+| `tdh3 firmware flash FILE.bin` | Flashes a firmware file you have. `--force` for a test build. | Hold **PTT** when it asks |
 | `tdh3 firmware extract FOLDER` | Saves the firmware this flasher carries as `.bin` files in that folder, the full build and the receive-only one. Leave out the folder to use the current one. | Nothing |
 
 ![The flasher when it has finished](img/term-flash.png)
 
 More: [Updating the firmware](Updating).
 
-## Backups and settings
+## Backups
+
+A backup is one file on your computer holding the radio's whole memory: every channel and its
+name, the scan list and groups, the FM radio presets, every menu setting, and the radio's factory
+calibration. It's always 8,200 bytes. Flashing new firmware doesn't touch this memory, so a backup
+isn't needed for an update, but make one before you change a lot at once.
 
 | Command | What it does | Radio needs |
 |---|---|---|
-| `tdh3 eeprom backup FILE.bin` | Saves the radio's whole memory: channels, settings and calibration. It only reads. | PC LINK |
-| `tdh3 settings restore FILE.bin` | Puts the settings from a backup back. The channels and calibration on the radio stay. | PC LINK |
+| `tdh3 eeprom backup FILE.bin` | Saves a backup to `FILE.bin`. It only reads: nothing on the radio changes. | PC LINK |
+| `tdh3 channels list --file FILE.bin` | Shows the channels in a backup. `channels export --file FILE.bin` saves them as a CSV. | Nothing |
+| `tdh3 channels copy FILE.bin` | Puts the channels from a backup back (or onto another radio). `--fm=false` keeps this radio's FM presets. | PC LINK |
+| `tdh3 settings restore FILE.bin` | Puts the settings from a backup back (or onto another radio). The channels and calibration on the radio stay. | PC LINK |
 | `tdh3 reset` | Every setting back to its default. The channels stay; `--channels` empties them too. | PC LINK |
 
+### Making a backup
+
+1. On the radio: press **MENU**, type **4** **6** (PC LINK), press **MENU**. The screen says
+   *waiting for computer*.
+2. In a terminal in the flasher's folder:
+   ```bash
+   tdh3 eeprom backup my-radio.bin
+   ```
+   It says *saved* with the file's name. Press **V/M** on the radio to leave PC LINK.
+
+The file goes in the folder the terminal is in, under the name you typed. Give a new name each
+time (`my-radio-june.bin`, say): a file with the same name is replaced without asking. To keep
+backups in a folder, make the folder first, then type its name: `tdh3 eeprom backup old/my-radio.bin`.
+It also works on a radio with TIDRADIO's own firmware, without PC LINK.
+
+### Backups tdh3 makes by itself
+
+These commands save the whole radio first, before they write anything:
+`tdh3 channels set`, `move`, `clear`, `lock`, `unlock` and `copy`.
+The file goes in a folder called `backups` inside the folder the terminal is in (it's made if it
+isn't there), named with the date and time: `backups/td-h3-20261114-153012.bin` was made on
+14 November 2026 at 15:30:12. The command prints the name when it's done. These files are ordinary
+backups: everything below works with them.
+
+`tdh3 channels import`, `tdh3 reset` and `tdh3 settings restore` **don't** save one. Run
+`tdh3 eeprom backup` before them if you might want things back.
+
+### Putting a backup back
+
+Radio in PC LINK, then either or both:
+
+```bash
+tdh3 channels copy my-radio.bin
+tdh3 settings restore my-radio.bin
+```
+
+`channels copy` puts back channels 1-199 (frequencies, tones, power, names, scan list and groups)
+and the 25 FM radio presets, and replaces whatever channels the radio has now. It refuses a backup
+with no channels in it. `settings restore` puts back every menu setting and what slots A and B were
+tuned to; the radio restarts by itself with them. Each shows what it will do and waits for
+**Enter**, and reads back what it wrote to check it. Both work with a backup from another TD-H3.
+
+What a backup never puts back:
+
+- **The calibration.** Each radio's factory calibration is its own, so `tdh3` never writes it, not
+  even from that radio's own backup.
+- **The CALL ID and the stored DTMF codes.** Set them again on the radio, in the menu.
+
 More: [Saving and restoring your settings](Updating#saving-and-restoring-your-settings),
-[Putting the settings back to defaults](Updating#putting-the-settings-back-to-defaults).
+[Putting the settings back to defaults](Updating#putting-the-settings-back-to-defaults),
+[Copy channels from another radio](Channels-and-Scanning#copy-channels-from-another-radio).
 
 ## Channels
 
 | Command | What it does | Radio needs |
 |---|---|---|
 | `tdh3 channels list` | Shows your channels. `--slots 1-20` for some; `--file FILE.bin` reads a backup instead. | PC LINK, or `--file` |
-| `tdh3 channels export FILE.csv` | Saves them as a CHIRP CSV you can edit. | PC LINK, or `--file` |
-| `tdh3 channels import FILE.csv` | Loads a CHIRP CSV. `--dry-run` only shows what it would do; `--clear` empties channels not in the file. | PC LINK |
+| `tdh3 channels export FILE.csv` | Saves them as a CHIRP CSV you can edit. `--slots` and `--file` as for `list`. | PC LINK, or `--file` |
+| `tdh3 channels import FILE.csv` | Loads a CHIRP CSV. `--dry-run` only shows what it would do; `--clear` empties channels not in the file. It saves no backup: run `tdh3 eeprom backup` first. | PC LINK |
 | `tdh3 channels set CHANNELS` | Changes only what you give: `--name`, `--power`, `--bw`, `--rx`, `--duplex`, `--offset`, `--tone`, `--rx-tone`, `--tx-tone`, `--groups`, `--scan`. | PC LINK |
 | `tdh3 channels move FROM TO` | Moves a channel to an empty number. | PC LINK |
 | `tdh3 channels clear CHANNELS` | Empties channels. | PC LINK |
 | `tdh3 channels lock CHANNELS` | Stops channels ever transmitting. `unlock` makes them simplex again. | PC LINK |
-| `tdh3 channels copy FILE.bin` | Copies the whole channel list from another radio's backup. | PC LINK |
+| `tdh3 channels copy FILE.bin` | Copies the whole channel list from a backup, this radio's or another's. `--fm=false` keeps this radio's FM presets. | PC LINK |
 
-`CHANNELS` can be a list and ranges, like `1-39,41,88-94`. More:
+`CHANNELS` can be a list and ranges, like `1-39,41,88-94`. `set`, `move`, `clear`, `lock`, `unlock`
+and `copy` save a backup first ([Backups tdh3 makes by itself](#backups-tdh3-makes-by-itself)). More:
 [Changing channels from the computer](Channels-and-Scanning#changing-channels-from-the-computer).
 
 ![tdh3 channels list](img/term-channels.png)
@@ -96,14 +159,17 @@ All of these need REMOTE on.
 | `tdh3 remote keys 1 4 6` | Presses keys: `0`-`9`, `MENU`, `UP`, `DOWN`, `VM`, `*`, `#`, `TORCH`. Add `:long` to hold one. |
 | `tdh3 remote home` | Goes back to the home screen. |
 | `tdh3 remote settings` | Lists every menu setting and its value. It only reads. |
-| `tdh3 remote watch` | Prints the signal and whether the squelch is open, five times a second. |
+| `tdh3 remote watch` | Prints the signal and whether the squelch is open, five times a second, until **Ctrl-C**. `--every 1s` reads less often. |
 | `tdh3 remote wait "squelch open"` | Waits until that text shows on the screen. `--gone` waits for it to go; `--timeout 30m` gives up. |
 | `tdh3 remote record FILE` | Saves everything the screen shows until **Ctrl-C**. |
-| `tdh3 remote replay FILE` | Plays a recording back. `-o my.gif` makes an animated GIF. |
+| `tdh3 remote replay FILE` | Plays a recording back. `--fast` shows it all at once; `-o my.gif` makes an animated GIF. |
 
 `tdh3 remote screen -o shot.png` saves a picture of the radio's screen, like this one:
 
 ![A picture of the radio's screen](img/memory.png)
+
+If the radio is slow to redraw and a command reads the screen too early, `--wait 3s` gives it
+longer (the normal wait is 1.5 seconds).
 
 More: [Recording the screen](Tools#recording-the-screen).
 
@@ -120,7 +186,7 @@ options run: tdh3 --help, and tdh3 COMMAND --help.
 How the radio connects:
 - REMOTE must be on for every `tdh3 remote` command.
 - PC LINK is needed for `tdh3 channels`, `eeprom`, `settings` and `reset`. To enter it run
-  `tdh3 remote keys MENU 4 5 MENU`, wait a few seconds, and try again if the radio doesn't
+  `tdh3 remote keys MENU 4 6 MENU`, wait a few seconds, and try again if the radio doesn't
   answer at first. While it's in PC LINK, `tdh3 remote` won't answer. Ask me to press V/M
   on the radio to leave it.
 
@@ -138,8 +204,9 @@ Safety:
 - Only with my say-so: `tdh3 flash`, `tdh3 update`, `tdh3 reset`, `tdh3 settings restore`,
   `tdh3 channels clear`, `import`, `copy` or `lock`, and changing TX BANDS (item 13).
   A flash also needs me to hold PTT.
-- `tdh3 channels` commands that change the radio save a backup in backups/ first. Before anything
-  else that writes to it, run `tdh3 eeprom backup FILE.bin`.
+- `tdh3 channels set`, `move`, `clear`, `lock`, `unlock` and `copy` save a backup in backups/
+  first. Before anything else that writes to it (`channels import`, `reset`, `settings restore`),
+  run `tdh3 eeprom backup FILE.bin` with a new file name.
 - Leave the radio as you found it: on the home screen, same channel, same settings.
 ```
 

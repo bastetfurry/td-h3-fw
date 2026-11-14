@@ -9,6 +9,8 @@ starts with its part of this list.
   a strong station (navy to red in CLASSIC; each theme uses its own colours), and keeps a waterfall
   of the last sweeps under the bars. Its scale sets itself to the band's noise, the cursor's signal
   shows in dBm beside its frequency, and 5 switches to a slow sweep that catches short transmissions.
+- tdh3's help and messages give the right keys for PC LINK (MENU, 4 6, MENU), say where the
+  backups it saves by itself go, which commands save none, and how to put a backup back.
 
 ## 0.66.0
 
