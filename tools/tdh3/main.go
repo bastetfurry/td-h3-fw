@@ -62,6 +62,11 @@ func open(port string, baud int) (serial.Port, error) {
 	return p, nil
 }
 
+// A double-click opens the flasher (doubleClicked), so cobra must not stop a program Windows
+// Explorer started with its "This is a command line tool" note. That note checks only whether
+// the parent process is explorer.exe, which is every plain double-click.
+func init() { cobra.MousetrapHelpText = "" }
+
 func main() {
 	var port string
 	root := &cobra.Command{

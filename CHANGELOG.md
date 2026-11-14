@@ -13,6 +13,8 @@ starts with its part of this list.
   smaller one the flasher looks as before.
 - tdh3's help and messages say "restore" and "reset" where they said "put back": `tdh3 restore` is
   "Restore a backup to the radio", and `tdh3 reset` is "Reset every setting to its default".
+- Windows: double-clicking `tdh3.exe` opens the flasher every time. Before, a double-click could
+  show "This is a command line tool" and close instead.
 
 ## 0.67.1
 
