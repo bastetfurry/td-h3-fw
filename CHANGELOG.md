@@ -16,6 +16,9 @@ starts with its part of this list.
   longer share a name: the second gets `-2` after the time.
 - New: `tdh3 restore BACKUP.bin` puts a whole backup back in one step: channels, FM presets,
   settings, the CALL ID and the stored DTMF codes. It lists what will change and asks first.
+- New: `tdh3 backups` lists your backups with the date, firmware and channel count.
+  `tdh3 eeprom backup` with no file name saves into the `backups` folder under the date and time,
+  and it no longer replaces a file you already have unless you add `--force`.
 
 ## 0.66.0
 

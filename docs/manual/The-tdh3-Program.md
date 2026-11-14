@@ -13,6 +13,7 @@ manages its channels and settings, and lets a computer see its screen and press 
 | Change channels | `tdh3 channels set 88-94 --power low` | PC LINK |
 | Back up the radio | `tdh3 eeprom backup my-radio.bin` | PC LINK |
 | Put a whole backup back | `tdh3 restore my-radio.bin` | PC LINK |
+| See the backups I have | `tdh3 backups` | Nothing |
 | Put my channels back from a backup | `tdh3 channels copy my-radio.bin` | PC LINK |
 | Put my settings back from a backup | `tdh3 settings restore my-radio.bin` | PC LINK |
 | See what the radio shows | `tdh3 remote screen` | REMOTE on |
@@ -68,7 +69,8 @@ isn't needed for an update, but make one before you change a lot at once.
 
 | Command | What it does | Radio needs |
 |---|---|---|
-| `tdh3 eeprom backup FILE.bin` | Saves a backup to `FILE.bin`. It only reads: nothing on the radio changes. | PC LINK |
+| `tdh3 eeprom backup FILE.bin` | Saves a backup to `FILE.bin`. It only reads: nothing on the radio changes. Leave out the name to save it in `backups`, named by the date and time. It never replaces a file already there; `--force` does. | PC LINK |
+| `tdh3 backups` | Lists the backups in the `backups` folder: when each was made, `td-h3-fw` if it holds this firmware's settings, and how many channels. | Nothing |
 | `tdh3 channels list --file FILE.bin` | Shows the channels in a backup. `channels export --file FILE.bin` saves them as a CSV. | Nothing |
 | `tdh3 restore FILE.bin` | Puts the whole backup back: channels, FM presets, settings, CALL ID and DTMF codes. Never the calibration. | PC LINK |
 | `tdh3 channels copy FILE.bin` | Puts the channels from a backup back (or onto another radio). `--fm=false` keeps this radio's FM presets. | PC LINK |
@@ -86,8 +88,11 @@ isn't needed for an update, but make one before you change a lot at once.
    It says *saved* with the file's name. Press **V/M** on the radio to leave PC LINK.
 
 The file goes in the folder the terminal is in, under the name you typed. Give a new name each
-time (`my-radio-june.bin`, say): a file with the same name is replaced without asking. To keep
-backups in a folder, make the folder first, then type its name: `tdh3 eeprom backup old/my-radio.bin`.
+time (`my-radio-june.bin`, say): if a file with that name is already there, it says so and saves
+nothing (add `--force` to replace it). To keep backups in a folder, make the folder first, then
+type its name: `tdh3 eeprom backup old/my-radio.bin`. Leave out the name, `tdh3 eeprom backup`,
+and it goes in the `backups` folder named by the date and time, like the
+[backups tdh3 makes by itself](#backups-tdh3-makes-by-itself).
 It also works on a radio with TIDRADIO's own firmware, without PC LINK.
 
 ### Backups tdh3 makes by itself
@@ -100,6 +105,20 @@ isn't there), named with the date and time: `backups/td-h3-20261114-153012.bin` 
 14 November 2026 at 15:30:12. Two in the same second get `-2`, `-3` after the time, so a backup is
 never replaced. The command prints the name. These files are ordinary backups: everything below
 works with them.
+
+`tdh3 backups` lists them, oldest first:
+
+```text
+┌─────────────────────────────────┬───────────────────┬────────┬────────┐
+│File                             │Made               │Firmware│Channels│
+├─────────────────────────────────┼───────────────────┼────────┼────────┤
+│backups/td-h3-20261101-090412.bin│2026-11-01 09:04:12│td-h3-fw│42      │
+│backups/td-h3-20261114-153012.bin│2026-11-14 15:30:12│td-h3-fw│44      │
+└─────────────────────────────────┴───────────────────┴────────┴────────┘
+```
+
+*Firmware* says `td-h3-fw` when the backup holds this firmware's settings, and `-` when it doesn't
+(a backup from TIDRADIO's firmware, say). A backup never records the version number.
 
 ### Putting a backup back
 

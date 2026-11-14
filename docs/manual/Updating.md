@@ -239,8 +239,9 @@ or copy your settings onto a second TD-H3.
    ```bash
    tdh3 eeprom backup my-radio-backup.bin
    ```
-   It says *saved*. The file is in the folder the terminal is in; a file with the same name is
-   replaced, so give each backup its own name. Press **V/M** on the radio when it's done.
+   It says *saved*. The file is in the folder the terminal is in. Give each backup its own name:
+   a file with the same name is never replaced (it says so and saves nothing). Press **V/M** on
+   the radio when it's done.
 2. **Put them back, any time later.** Radio in PC LINK again, then:
    ```bash
    tdh3 settings restore my-radio-backup.bin

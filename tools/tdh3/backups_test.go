@@ -138,3 +138,58 @@ func TestBackupFailureWritesNothing(t *testing.T) {
 		t.Fatalf("%d blocks written without a backup", len(*writes))
 	}
 }
+
+func TestEEPROMBackupNeverReplacesWithoutForce(t *testing.T) {
+	dir := inTemp(t)
+	ident, mem := []byte("P31183\xff\xff"), seededEEPROM()
+	file := filepath.Join(dir, "my-radio.bin")
+	must(t, os.WriteFile(file, []byte("keep me"), 0o644))
+	if _, err := saveEEPROM([]string{file}, false, ident, mem); err == nil || !strings.Contains(err.Error(), "--force") {
+		t.Fatalf("err = %v, want a refusal naming --force", err)
+	}
+	if b, _ := os.ReadFile(file); string(b) != "keep me" {
+		t.Fatal("the file was replaced")
+	}
+	_, err := saveEEPROM([]string{file}, true, ident, mem)
+	must(t, err)
+	if got, err := loadImage(file); err != nil || !bytes.Equal(got, mem) {
+		t.Fatalf("--force didn't replace it (%v)", err)
+	}
+	p, err := saveEEPROM(nil, false, ident, mem)
+	must(t, err)
+	if !datedName.MatchString(filepath.Base(p)) || filepath.Dir(p) != backupDir {
+		t.Fatalf("no name saved as %s, want backups/td-h3-DATE-TIME.bin", p)
+	}
+}
+
+func TestBackupsListsDateFirmwareAndChannels(t *testing.T) {
+	inTemp(t)
+	if bs, err := readBackups(backupDir); err != nil || len(bs) != 0 {
+		t.Fatalf("no folder: %v %v", bs, err)
+	}
+	must(t, os.Mkdir(backupDir, 0o755))
+	ours := blank()
+	ours[cfgAddr] = 0xAD
+	add(ours, channel{loc: 1, rx: 14652000, tx: 14652000, rxTone: noTone, txTone: noTone}, channel{loc: 5, rx: 14652000, tx: 14652000, rxTone: noTone, txTone: noTone})
+	put := func(name string, b []byte) { must(t, os.WriteFile(filepath.Join(backupDir, name), b, 0o644)) }
+	put("td-h3-20261114-153012-2.bin", append([]byte("P31183\xff\xff"), ours...))
+	stock := make([]byte, 0x2000) // no channels, no td-h3-fw settings
+	put("td-h3-20261101-090000.bin", append([]byte("P31183\xff\xff"), stock...))
+	put("notes.txt", []byte("hello"))
+	old := time.Date(2025, 1, 2, 3, 4, 5, 0, time.Local)
+	must(t, os.Chtimes(filepath.Join(backupDir, "notes.txt"), old, old))
+	bs, err := readBackups(backupDir)
+	must(t, err)
+	var got []string
+	for _, b := range bs {
+		got = append(got, strings.Join([]string{b.name, b.when, b.firmware, b.channels}, "|"))
+	}
+	want := []string{
+		"notes.txt|2025-01-02 03:04:05|not a TD-H3 backup|-",
+		"td-h3-20261101-090000.bin|2026-11-01 09:00:00|-|0",
+		"td-h3-20261114-153012-2.bin|2026-11-14 15:30:12|td-h3-fw|2",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

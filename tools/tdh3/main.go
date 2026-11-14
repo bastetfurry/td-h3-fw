@@ -1,6 +1,7 @@
 // tdh3 talks to a TIDRADIO TD-H3 over its USB-C port.
 //
-//	tdh3 eeprom backup  -p /dev/ttyUSB1 backups/td-h3-eeprom.bin
+//	tdh3 eeprom backup  -p /dev/ttyUSB1 my-radio.bin
+//	tdh3 backups
 //	tdh3 flash
 //	tdh3 update
 //	tdh3 firmware flash -p /dev/ttyUSB1 fw/build/td-h3-rx.bin
@@ -67,16 +68,22 @@ func main() {
 	root.PersistentFlags().StringVarP(&port, "port", "p", "", "serial port of the radio, e.g. /dev/ttyUSB1 (found by itself with one radio cable plugged in)")
 
 	eeprom := &cobra.Command{Use: "eeprom", Short: "The radio's 8 KB settings and calibration memory"}
-	eeprom.AddCommand(&cobra.Command{
-		Use:   "backup FILE",
+	var forceBackup bool
+	eepromBackup := &cobra.Command{
+		Use:   "backup [FILE]",
 		Short: "Read the whole EEPROM into FILE (read-only: never writes to the radio)",
 		Long: "Uses the clone protocol at 38400. Works with stock firmware, and with td-h3-fw once\n" +
 			"the radio is in PC LINK (MENU, 4 6, MENU). FILE is the 8-byte ident followed by\n" +
-			"the 8192 EEPROM bytes; a file of that name is replaced. Put it back with tdh3 restore FILE\n" +
-			"(all of it), or tdh3 channels copy FILE and tdh3 settings restore FILE (a part).\n" +
-			"-p is found by itself when there is one radio cable.",
-		Args: cobra.ExactArgs(1),
+			"the 8192 EEPROM bytes. With no FILE it goes in backups/ in the current folder, named by\n" +
+			"the date and time (backups/td-h3-DATE-TIME.bin). A FILE that is already there is never\n" +
+			"replaced unless --force. Put it back with tdh3 restore FILE (all of it), or tdh3 channels\n" +
+			"copy FILE and tdh3 settings restore FILE (a part). -p is found by itself when there is one\n" +
+			"radio cable.",
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 && !forceBackup && fileExists(args[0]) {
+				return fmt.Errorf("%s is already there: give a new name, or --force to replace it", args[0])
+			}
 			if port == "" { // one radio cable plugged in: use it
 				var err error
 				if port, err = findPort(); err != nil {
@@ -92,14 +99,17 @@ func main() {
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(args[0], append(ident, mem...), 0o644); err != nil {
+			file, err := saveEEPROM(args, forceBackup, ident, mem)
+			if err != nil {
 				return err
 			}
-			logger.Info("saved", "file", args[0], "ident", fmt.Sprintf("%q", ident), "bytes", len(mem),
+			logger.Info("saved", "file", file, "ident", fmt.Sprintf("%q", ident), "bytes", len(mem),
 				"calibration", calibrated(mem))
 			return nil
 		},
-	})
+	}
+	eepromBackup.Flags().BoolVar(&forceBackup, "force", false, "replace FILE if it is already there")
+	eeprom.AddCommand(eepromBackup)
 
 	firmware := &cobra.Command{Use: "firmware", Short: "The application image in flash"}
 	var forceFw bool
@@ -424,7 +434,7 @@ func main() {
 	ez.Flags().BoolVarP(&yes, "yes", "y", false, "for scripts: wait for the radio as long as it takes (several cables need -p)")
 	ez.Flags().BoolVar(&force, "force", false, "flash a build that isn't a tagged release (\"0.54.2-1\", \"+\")")
 
-	root.AddCommand(ez, eeprom, channels, whole, reset, settings, firmware, remote, updateCmd(&port))
+	root.AddCommand(ez, eeprom, channels, whole, backupsCmd(), reset, settings, firmware, remote, updateCmd(&port))
 	root.Args, root.RunE = cobra.NoArgs, ez.RunE // no command (a double-click): flash
 	ver := "built from source"                   // a release flasher is the version of the firmware inside it
 	if img := builtIn(false); img != nil {
