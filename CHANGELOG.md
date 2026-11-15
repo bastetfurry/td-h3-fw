@@ -3,7 +3,7 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
-## Next release
+## 0.68.0
 
 - On Windows, `tdh3.exe` now has its own icon (the radio tower from the flasher) and shows its
   version, maker and description under Properties > Details. A plain start no longer touches any
