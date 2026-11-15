@@ -919,6 +919,17 @@ void draw_status(void) __reentrant
 
 static void slot_drawn(uint8_t i);
 
+// The bottom line when it has nothing else to say: the keys of the state home is in. A number
+// being typed keeps its digits, and MENU ok follows the longest ("FREQ 146.52").
+static void keys_line(void) __reentrant
+{
+    static const __code char *const __code keys_s[] = {"hold * to unlock", "* stop  V/M back  \x7f\x80",
+        "hold # leave \x7f\x80 WX1-7", "hold 1  monitor off", "* scan  # A/B V/M vfo", "* scan  # A/B  V/M ch"};
+    uint8_t i = locked ? 0 : scanning ? 1 : wxm ? 2 : mon ? 3 : sl_mem() ? 4 : 5;
+    if (entry_n && i) lcd_text(86, BOT_Y, "MENU ok", 1, P_DIM);
+    else lcd_text(0, BOT_Y, keys_s[i], 1, P_DIM);
+}
+
 static void draw_main(void)
 {
     uint8_t now_ok = rx_settled();          // before the slots' 40 ms: a retune this pass reads unsettled here
@@ -939,6 +950,7 @@ static void draw_main(void)
     m_open = 0xFF;                          // just retuned: the main loop draws the new channel's first settled reading
     if (now_ok) draw_meter();
     draw_status();
+    if (!tx && !note && !saving) keys_line();   // draw_status left the bottom line blank, or a number on it
 }
 
 // CALL ID: a callsign, sent in Morse when PTT is let go on a ham band, at most once in 10 minutes
@@ -1059,7 +1071,7 @@ static void menu_row(uint8_t i, uint8_t y) __reentrant   // the name, the value 
 }
 
 static const __code label_t hint[] = {      // the same length moving and changing: each covers the other
-    {0, BOT_Y, 1, P_DIM, "\x7f\x80 MENU pick V/M back"}, {0, BOT_Y, 1, P_DIM, "\x7f\x80 change MENU done  "}};
+    {0, BOT_Y, 1, P_DIM, "MENU pick V/M back \x7f\x80"}, {0, BOT_Y, 1, P_DIM, "MENU done  \x7f\x80 change "}};
 
 static void menu_help(uint8_t i) __reentrant   // buf: what item i does, unpacked from help.c (three characters a word)
 {
@@ -1277,7 +1289,7 @@ static void slot_drawn(uint8_t i)           // draw_slot, then its last heard
 
 static uint8_t heard_screen(void)          // the picked row (lsel), or 0xFF for V/M
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "LAST HEARD"}, {0, BOT_Y - 12, 1, P_DIM, "\x7f\x80 move  MENU tune"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "LAST HEARD"}, {0, BOT_Y - 12, 1, P_DIM, "MENU tune  \x7f\x80 move"}};
     uint8_t i, k;
     list_open();
     for (;;) {
@@ -1313,7 +1325,7 @@ __xdata char *groups_s(__xdata char *p, uint8_t word) __reentrant
 // result (kept: like a setting, it counts as soon as it is changed). CH GROUPS (link 0): a channel's groups; GROUP LINK (1): the groups a scan covers.
 static uint8_t group_pick(uint8_t g, uint8_t link) __reentrant
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "CH GROUPS"}, {0, BOT_Y - 12, 1, P_DIM, "\x7f\x80 move  MENU on/off"}, {0, 0, 1, P_ACC, "GROUP LINK"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "CH GROUPS"}, {0, BOT_Y - 12, 1, P_DIM, "MENU on/off  \x7f\x80 move"}, {0, 0, 1, P_ACC, "GROUP LINK"}};
     uint8_t i, k;
     list_open();
     for (;;) {
@@ -1364,7 +1376,7 @@ static __xdata char *ch_row(uint8_t n) __reentrant   // "012 GMRS1    462.562" i
 
 static void delete_screen(void) __reentrant   // reentrant: its temporaries on the stack, not in DATA
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DELETE CH"}, {0, BOT_Y - 12, 1, P_DIM, "\x7f\x80 move  MENU delete"}, {0, BOT_Y - 24, 1, P_RED, "DELETE"}, {0, BOT_Y - 12, 1, P_FG, "MENU = YES"}, {0, BOT_Y, 1, P_FG, "V/M  = NO, keep it"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DELETE CH"}, {0, BOT_Y - 12, 1, P_DIM, "MENU delete  \x7f\x80 move"}, {0, BOT_Y - 24, 1, P_RED, "DELETE"}, {0, BOT_Y - 12, 1, P_FG, "MENU = YES"}, {0, BOT_Y, 1, P_FG, "V/M  = NO, keep it"}};
     uint8_t n = sl_mem() ? sl_chn() : nxt(199, 1), k, sure = 0, i, c, cnt;
     if (!n) { note = "NO CHANNELS LOADED"; chime_no(); return; }
     remote_req |= REQ_REDRAW;
@@ -2157,7 +2169,7 @@ static void dtmf_send(void) __reentrant
 static uint8_t code_len(uint8_t j) __reentrant { uint8_t n = 0; while (CODES[j++] < 16) n++; return n; }   // code at CODES + j
 static void codes_screen(void)
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DTMF CODES"}, {0, BOT_Y - 12, 1, P_DIM, "\x7f\x80 move  MENU edit"},
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DTMF CODES"}, {0, BOT_Y - 12, 1, P_DIM, "MENU edit  \x7f\x80 move"},
         {0, BOT_Y - 12, 1, P_DIM, "0-9 * #  MENU save"}, {0, BOT_Y, 1, P_DIM, "V/M delete digit"}};
     uint8_t i, k, n, j, ed = 0;             // ed: typing the code at the cursor
     for (i = 0; i < 8; i++) code_load(i);

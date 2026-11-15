@@ -931,7 +931,7 @@ def test_fm_grid_numbers(cpu):             # each page: its slots top right, a k
         keys_ = [t.get((x + 1, y)) for y in (76, 87, 98) for x in (0, 44, 88)]
         assert keys_ == [str(k) if page * 9 + k <= 25 else None for k in range(1, 10)], (page, keys_)
         assert t[(92, 0)].strip() == ['M1-9', 'M10-18', 'M19-25'][page], t[(92, 0)]
-        assert t[(0, 110)] == '0 page  *# fine' and t[(0, 120)] == 'UP/DN seek  V/M back', t   # the keys
+        assert t[(0, 110)] == '0 page  *# fine' and t[(0, 120)] == 'V/M back  \x7f\x80 seek', t   # the keys
         if page: assert t[(100, 12)].strip() == 'M10', t[(100, 12)]   # the slot playing, on every page
         if page == 1: assert t[(10, 76)] == " 97.7", t   # M10: 97.7
 
@@ -1425,7 +1425,36 @@ def test_keypad_lock(cpu):
     assert freq(cpu) == 14652500, freq(cpu)
 
 
-def test_key_lock_ptt(cpu):                # KEY LOCK KEYS (default): PTT works locked. KEYS+PTT: PTT and PTT-B refused,
+def test_home_keys_line(cpu):              # the bottom line: the keys of the state home is in
+    menu(cpu, 'REMOTE', ['UP', 'EXIT'])
+    def bottom(): return {r[1:3]: r[3] for r in remote_records_now(cpu) if r[0] == 't' and r[2] == 120}
+    assert bottom() == {(0, 120): '* scan  # A/B  V/M ch'}, bottom()   # slot B, the VFO
+    press(cpu, '1')
+    assert bottom() == {(0, 120): 'FREQ 1', (86, 120): 'MENU ok'}, bottom()
+    press(cpu, 'EXIT')                     # the digit deleted
+    press(cpu, '*')
+    assert bottom() == {(0, 120): '* stop  V/M back  \x7f\x80'}, bottom()
+    press(cpu, 'EXIT')
+    longpress(cpu, '#')
+    assert bottom() == {(0, 120): 'hold # leave \x7f\x80 WX1-7'}, bottom()
+    longpress(cpu, '#')
+    press(cpu, 'EXIT')                     # V/M: a channel
+    assert bottom() == {(0, 120): '* scan  # A/B V/M vfo'}, bottom()
+    longpress(cpu, '1')
+    assert bottom() == {(0, 120): 'hold 1  monitor off'}, bottom()
+    longpress(cpu, '1')
+    longpress(cpu, '*')
+    assert bottom() == {(0, 120): 'hold * to unlock'}, bottom()
+
+
+def remote_records_now(cpu):               # one full screen through REMOTE
+    cpu.uart_out.clear()
+    cpu.uart_in.extend(b'S')
+    cpu.run(3_000_000)
+    return remote_records(cpu.uart_out)
+
+
+def test_key_lock_ptt(cpu):               # KEY LOCK KEYS (default): PTT works locked. KEYS+PTT: PTT and PTT-B refused,
     longpress(cpu, '*')                    # slot B not taken, the flashlight still on; unlocked, PTT talks again
     cpu.key = 'PTT'
     cpu.run(600_000)
@@ -1672,7 +1701,7 @@ def test_scan_stops_for_freq_find(cpu):    # a freq-find pick on a scan stop sta
     keys(cpu, ['*'])                       # a VFO scan on 2 m
     cpu.run(1_000_000)
     cpu.bk.counter = lambda: 44700000
-    longpress(cpu, '7')
+    press(cpu, '7', hold=2_000_000)        # a scan's redraws take ~0.5M instructions here to see the key
     cpu.run(1_500_000)
     press(cpu, 'MENU')
     cpu.bk.counter = None
@@ -4132,6 +4161,7 @@ FIRST = [
 ]
 
 INDEPENDENT = [
+    ('home: the bottom line shows the keys of its state', test_home_keys_line),
     ('GROUP LINK: a scan covers several groups', test_group_link),
     ('CH GROUPS: a channel\'s groups set on the radio', test_ch_groups),
     ('CH GROUPS: all eight round-trips (byte 13 marks byte 15 ours)', test_ch_groups_all_eight),

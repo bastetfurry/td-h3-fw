@@ -91,6 +91,20 @@ Both slots are laid out the same way, under a status bar. The meter sits between
     own time instead (see [Transmitting](Transmitting)).
 
 The bottom line is for messages (`TX LOCKED CHANNEL`, `LOW BATTERY`) and what you're typing.
+When it has nothing else to say, it shows the keys that work right now, and what each does:
+
+| The radio is | The bottom line says |
+|---|---|
+| On the VFO (a frequency) | `* scan  # A/B  V/M ch`: **\*** scans, **#** swaps slot A and B, **V/M** goes to the channels |
+| On a memory channel | `* scan  # A/B V/M vfo`: the same, and **V/M** goes back to the VFO |
+| Scanning | `* stop  V/M back  ▲▼`: **\*** stops on what it found, **V/M** goes back where it started, **UP / DOWN** scan that way |
+| In weather mode | `hold # leave ▲▼ WX1-7`: hold **#** to go back, **UP / DOWN** step through the seven NOAA channels |
+| Listening with monitor on | `hold 1  monitor off` |
+| Locked | `hold * to unlock` |
+| Typing a number | `MENU ok` at the right, after the digits |
+
+Nothing shows there while you transmit.
+
 A message goes away by itself after 3 seconds, or when you press a key. `LOW BATTERY` is the
 exception: it stays until you press a key, so you don't miss it, and so does `PTT HELD: LET GO`
 until you let go of PTT.
@@ -119,7 +133,7 @@ frequency, and the line under the mode shows its tones: here `TD754I` is sent wh
 ![Typing 146.5](img/typing.png)
 
 1. **The bottom line shows what you've typed**, with the decimal point placed for you. Six digits
-   tune immediately (`146520` = 146.520 MHz); MENU accepts fewer (`146` MENU = 146.000). A sixth
+   tune immediately (`146520` = 146.520 MHz); MENU (`MENU ok` at the right says so) accepts fewer (`146` MENU = 146.000). A sixth
    digit of 2 or 7 gets its last half kilohertz, so the 12.5 kHz channels can be typed:
    `462562` = 462.5625 MHz (GMRS channel 1). V/M
    deletes the last digit. In memory mode the same line says `CHANNEL` and takes three digits.

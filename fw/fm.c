@@ -266,7 +266,7 @@ static void draw(const char *msg, uint8_t mc) __reentrant   // mc: a P_* index
     lcd_text(0, BOT_Y, msg, 1, mc);
 }
 
-#define help "UP/DN seek  V/M back"         // one copy: SDCC merges a file's equal literals
+#define help "V/M back  \x7f\x80 seek"         // one copy: SDCC merges a file's equal literals
 static void hint(uint8_t typing) __reentrant { draw(typing ? "type MHz, MENU ok" : help, typing ? P_HI : P_DIM); }   // the keys, or the typing prompt
 
 static void load_presets(void) { for (uint8_t i = 0; i < NPRE; i++) pre[i] = preset_get(i + 1); }
