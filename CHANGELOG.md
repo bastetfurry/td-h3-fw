@@ -9,6 +9,10 @@ starts with its part of this list.
   a frequency (`V/M vfo` on a channel), the scan's own keys while scanning, how to leave weather
   mode, how to turn monitor off, and how to unlock the keys. While you type a number it says
   `MENU ok`. The menu, the lists and the FM radio list their keys first and the arrows last.
+- Every key line on the screen draws its keys in the key's own colour: **MENU** blue, **V/M**
+  orange, the other keys bright, and what each does in a softer colour. Every theme keeps it easy to
+  read; the night themes keep their one colour.
+- A key pressed from the computer (REMOTE) during a slow screen update is no longer lost.
 
 ## 0.68.0
 

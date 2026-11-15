@@ -248,7 +248,7 @@ static void draw_signal(uint16_t f) __reentrant         // dB over the band floo
 static void frame(void)                     // the parts that never change
 {
     static const __code label_t l[] = {{11, 0, 1, P_ACC, "FM RADIO"}, {0, 40, 1, P_DIM, "S"},
-                                       {0, BOT_Y - 10, 1, P_DIM, "0 page  *# fine"}};   // the keys, with help below
+                                       {0, BOT_Y - 10, 1, P_KEYS, "0 page  *# fine"}};   // the keys, with help below
     lcd_clear();
     draw_labels(l, 3);
     lcd_icon(0, 0, icon_note, P_ACC);
@@ -267,7 +267,7 @@ static void draw(const char *msg, uint8_t mc) __reentrant   // mc: a P_* index
 }
 
 #define help "V/M back  \x7f\x80 seek"         // one copy: SDCC merges a file's equal literals
-static void hint(uint8_t typing) __reentrant { draw(typing ? "type MHz, MENU ok" : help, typing ? P_HI : P_DIM); }   // the keys, or the typing prompt
+static void hint(uint8_t typing) __reentrant { draw(typing ? "type MHz, MENU ok" : help, typing ? P_HI : P_KEYS); }   // the keys, or the typing prompt
 
 static void load_presets(void) { for (uint8_t i = 0; i < NPRE; i++) pre[i] = preset_get(i + 1); }
 

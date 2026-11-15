@@ -105,6 +105,11 @@ When it has nothing else to say, it shows the keys that work right now, and what
 
 Nothing shows there while you transmit.
 
+The keys are drawn in the colour of the key itself: **MENU** in blue, **V/M** in orange, the black
+keys (**\***, **#**, the digits, **UP / DOWN**) in the screen's bright text colour. What each key does
+is in a softer colour. On the light themes the blue and orange are a darker shade so they stay easy
+to read; the night themes (NIGHT AMBER, GREEN, NIGHT RED) draw everything in their own one colour.
+
 A message goes away by itself after 3 seconds, or when you press a key. `LOW BATTERY` is the
 exception: it stays until you press a key, so you don't miss it, and so does `PTT HELD: LET GO`
 until you let go of PTT.

@@ -140,7 +140,11 @@ uint8_t lcd_text_bg(uint8_t x, uint8_t y, const char *s, uint8_t scale, uint16_t
 #endif
 void lcd_fillp(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t i) __reentrant { lcd_fill(x, y, w, h, pal[i]); }
 void lcd_clear(void) { lcd_fillp(0, 0, W, H, P_BG); }
-uint8_t lcd_text(uint8_t x, uint8_t y, const char *s, uint8_t scale, uint8_t fg) __reentrant { return lcd_text_bg(x, y, s, scale, pal[fg], c_bg); }
+uint8_t lcd_text(uint8_t x, uint8_t y, const char *s, uint8_t scale, uint8_t fg) __reentrant   // fg: a P_* index; P_KEYS: a key line
+{
+    if (fg == P_KEYS) { keys_text(x, y, (const __code char *)s); return 0; }
+    return lcd_text_bg(x, y, s, scale, pal[fg], c_bg);
+}
 
 // asm/lcd_icon.asm; this C is the reference (make CFUN=lcd_icon builds it)
 #ifdef C_LCD_ICON

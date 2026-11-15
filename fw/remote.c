@@ -36,9 +36,10 @@ void remote_tick(void)
     // A held key lets go by itself after 300 ms without a byte (tdh3 repeats the hold every 100 ms):
     // a release byte lost while the radio was busy held MENU into a long press, "SAVE TO CH 3".
     // Never before key_event has registered it: a hold read late, then a slow pass (a mirrored draw),
-    // was let go unseen and the press lost. After 1 s of silence it lets go regardless: a loop that
+    // was let go unseen and the press lost. After 2 s of silence it lets go regardless: a loop that
     // reads key_scan alone (FM's auto-preset stop) never registers it, and waited on it for good.
-    if (rkey && quiet > 60 && (key_held == rkey || quiet > 200)) rkey = K_NONE;
+    // Not 1 s: a byte read early in a mirrored all-C redraw (about 1 s) was gone before key_event ran.
+    if (rkey && quiet > 60 && (key_held == rkey || quiet > 400)) rkey = K_NONE;
 }
 
 static void put(uint8_t c) __reentrant { uart_put(PORT_USB, c); }

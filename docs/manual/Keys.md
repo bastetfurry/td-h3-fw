@@ -26,7 +26,7 @@ In the menu long presses do nothing; while you're typing a number, only hold **\
 | **0-9** | Type a frequency (6 digits) or channel (3 digits). In the [Menu](Menu): type an item's number to go to it (`1` `2` = item 12; for 1-5, one digit and a second's wait) | See the table below |
 | **UP / DOWN** | Next / previous frequency step or channel (with a scan group chosen, only that group's channels); while scanning, scan up / down; in weather mode, WX1-WX7 | (repeats) |
 | **MENU** (blue) | Open the [Menu](Menu). In the menu and every list: select, yes | Save this slot as a memory channel: it suggests the first free one and asks first (stops a scan) |
-| **V/M** (red) | Switch frequency (VFO) / memory mode; stop a scan; delete a typed digit. In the menu and every list: back, no | Memory mode: put this channel on or off the scan list; while scanning, take this channel off the scan list for good (a frequency: skip it until you switch off) |
+| **V/M** (orange) | Switch frequency (VFO) / memory mode; stop a scan; delete a typed digit. In the menu and every list: back, no | Memory mode: put this channel on or off the scan list; while scanning, take this channel off the scan list for good (a frequency: skip it until you switch off) |
 | **#** | Swap the selected slot, A ↔ B | [Weather](Channels-and-Scanning#weather) on or off: NOAA weather radio in the selected slot (stops a scan) |
 | **\*** | Start or stop scanning | Lock or unlock the keypad (stops a scan) |
 | **PTT** (big side key) | Transmit on slot A (or on the slot you're hearing in dual watch); A becomes the selected slot | |
@@ -36,13 +36,13 @@ In the menu long presses do nothing; while you're typing a number, only hold **\
 ## In the menu and every list
 
 The menu, LAST HEARD, CH GROUPS, GROUP LINK and DELETE CH all work the same way, and the bottom of
-each screen says what the keys do there.
+each screen says what the keys do there, each key in its own colour (**MENU** blue, **V/M** orange).
 
 | Key | Does |
 |---|---|
 | **UP / DOWN** | Move the lit row (past the last row it goes back to the first) |
 | **MENU** (blue) | Select it: change a setting, put a group on or off, tune to it; **yes** when the radio asks |
-| **V/M** (red) | Back one step (to the menu, then to the radio); **no** when the radio asks |
+| **V/M** (orange) | Back one step (to the menu, then to the radio); **no** when the radio asks |
 
 PTT doesn't transmit while the menu, a list or the save question (`SAVE CH 005? MENU=YES`) is open:
 close it with **V/M** first.
@@ -50,7 +50,7 @@ close it with **V/M** first.
 ![The save question on the bottom line](img/saveask.png)
 
 Anything that can't be undone asks first, in words: `DELETE 002 GMRS1?`, `REPLACE 005? MENU=YES`.
-Blue MENU is yes, red V/M is no.
+Blue MENU is yes, orange V/M is no.
 
 ![The radio asking before it deletes a channel](img/deleteask.png)
 

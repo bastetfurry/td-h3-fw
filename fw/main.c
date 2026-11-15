@@ -362,10 +362,50 @@ static const __code uint16_t themes[NTHEMES][16] = {
     {RGB(43, 51, 32), RGB(227, 214, 168), RGB(169, 173, 124), RGB(217, 164, 65), RGB(199, 224, 106), RGB(184, 199, 154), RGB(61, 74, 44), RGB(232, 96, 60), RGB(88, 101, 53), RGB(98, 64, 40), RGB(85, 95, 69), RGB(184, 199, 154), RGB(184, 199, 154), RGB(215, 163, 64), RGB(212, 161, 64), RGB(231, 95, 59)},   // FIELD
     {RGB(245, 216, 0), RGB(0, 0, 0), RGB(58, 51, 0), RGB(0, 0, 0), RGB(0, 92, 26), RGB(42, 42, 0), RGB(209, 184, 0), RGB(176, 0, 0), RGB(174, 180, 8), RGB(225, 153, 0), RGB(184, 164, 0), RGB(42, 42, 0), RGB(42, 42, 0), RGB(1, 1, 0), RGB(5, 5, 0), RGB(176, 0, 0)},   // HIGH-VIS
 };
+// Key lines (keys_text): MENU's blue and V/M's orange, as on the keypad, and the words saying what
+// each key does. Each at least 4.5:1 against its theme's background: blue and orange shaded darker on
+// the light themes and lighter on FIELD, the words bright where the theme's dim is too faint. The
+// night themes keep their one colour: the keys in its bright tint, the words in its dim.
+#define KB RGB(30, 140, 215)
+#define KO RGB(240, 105, 40)
+static const __code uint16_t keys_c[NTHEMES][3] = {
+    {KB, KO, RGB(120, 120, 120)},
+    {RGB(255, 176, 0), RGB(255, 176, 0), RGB(138, 90, 0)},
+    {RGB(51, 255, 102), RGB(51, 255, 102), RGB(26, 138, 51)},
+    {RGB(255, 24, 0), RGB(255, 24, 0), RGB(128, 8, 0)},
+    {RGB(15, 66, 100), RGB(110, 40, 8), RGB(15, 56, 15)},              // POCKET
+    {KB, KO, RGB(255, 154, 60)},                                       // NIXIE
+    {RGB(22, 100, 155), RGB(168, 60, 12), RGB(85, 85, 85)},            // E-INK
+    {RGB(70, 166, 232), RGB(246, 124, 64), RGB(169, 173, 124)},        // FIELD
+    {RGB(21, 94, 144), RGB(158, 58, 11), RGB(58, 51, 0)},              // HIGH-VIS
+};
 __xdata uint16_t pal[8];
 void draw_labels(const __code label_t *l, uint8_t n) __reentrant
 {
     for (; n; n--, l++) lcd_text(l->x, l->y, l->s, l->scale, l->col);
+}
+
+// A key line: each key in the colour of its cap (MENU blue and V/M orange, as on the keypad, the
+// black keys in the bright text colour), what it does in keys_c's word colour. A word is a key when it starts with M
+// (MENU), V (V/M), a digit, * # or an arrow. REMOTE gets the line once, plain, so tools read it whole.
+void keys_text(uint8_t x, uint8_t y, const __code char *s)
+{
+    __xdata char *p = buf, *e;
+    uint8_t m = mirror, k;
+    uint16_t c;
+    const __code uint16_t *kc = keys_c[cfg.theme];
+    cat(buf, s);                            // in RAM, so each word can be cut off and drawn on its own
+    if (m) remote_text(x, y, buf, 1, c_dim, c_bg);
+    mirror = 0;
+    while ((k = *p)) {                      // a word and the spaces after it, coloured by its first letter
+        c = k == 'M' ? kc[0] : k == 'V' ? kc[1] : k <= '9' || k >= 0x7F ? c_fg : kc[2];
+        for (e = p; *e > ' '; e++) ;
+        while (*e == ' ') e++;
+        k = *e; *e = 0;
+        x = lcd_text_bg(x, y, p, 1, c, c_bg);
+        *e = k; p = e;
+    }
+    mirror = m;
 }
 static void tx_prefs(void)                  // the settings radio.c, bk4819.c and remote.c read from their own variables
 {
@@ -926,8 +966,8 @@ static void keys_line(void) __reentrant
     static const __code char *const __code keys_s[] = {"hold * to unlock", "* stop  V/M back  \x7f\x80",
         "hold # leave \x7f\x80 WX1-7", "hold 1  monitor off", "* scan  # A/B V/M vfo", "* scan  # A/B  V/M ch"};
     uint8_t i = locked ? 0 : scanning ? 1 : wxm ? 2 : mon ? 3 : sl_mem() ? 4 : 5;
-    if (entry_n && i) lcd_text(86, BOT_Y, "MENU ok", 1, P_DIM);
-    else lcd_text(0, BOT_Y, keys_s[i], 1, P_DIM);
+    if (entry_n && i) lcd_text(86, BOT_Y, "MENU ok", 1, P_KEYS);
+    else lcd_text(0, BOT_Y, keys_s[i], 1, P_KEYS);
 }
 
 static void draw_main(void)
@@ -1071,7 +1111,7 @@ static void menu_row(uint8_t i, uint8_t y) __reentrant   // the name, the value 
 }
 
 static const __code label_t hint[] = {      // the same length moving and changing: each covers the other
-    {0, BOT_Y, 1, P_DIM, "MENU pick V/M back \x7f\x80"}, {0, BOT_Y, 1, P_DIM, "MENU done  \x7f\x80 change "}};
+    {0, BOT_Y, 1, P_KEYS, "MENU pick V/M back \x7f\x80"}, {0, BOT_Y, 1, P_KEYS, "MENU done  \x7f\x80 change "}};
 
 static void menu_help(uint8_t i) __reentrant   // buf: what item i does, unpacked from help.c (three characters a word)
 {
@@ -1132,7 +1172,7 @@ static void pc_link(void)
     remote = mirror = 0;                    // the clone protocol owns the port
     radio_off();
     lcd_clear();
-    static const __code label_t l[] = {{16, 40, 2, P_HI, "PC LINK"}, {4, 70, 1, P_DIM, "waiting for computer"}, {4, BOT_Y, 1, P_DIM, "V/M to leave"}};
+    static const __code label_t l[] = {{16, 40, 2, P_HI, "PC LINK"}, {4, 70, 1, P_DIM, "waiting for computer"}, {4, BOT_Y, 1, P_KEYS, "V/M to leave"}};
     draw_labels(l, 3);
     lcd_icon(4, 44, icon_link, P_HI);
     clone_session(cfg.bt);
@@ -1238,7 +1278,7 @@ static uint8_t list_key(uint8_t n) __reentrant          // 10 ms, then a key; UP
 
 static void list_frame(const __code label_t *l) __reentrant   // after list_redraw's clear: the title, what MENU does, V/M
 {
-    static const __code label_t back = {0, BOT_Y, 1, P_DIM, "V/M back"};
+    static const __code label_t back = {0, BOT_Y, 1, P_KEYS, "V/M back"};
     draw_labels(l, 2);
     draw_labels(&back, 1);
 }
@@ -1289,7 +1329,7 @@ static void slot_drawn(uint8_t i)           // draw_slot, then its last heard
 
 static uint8_t heard_screen(void)          // the picked row (lsel), or 0xFF for V/M
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "LAST HEARD"}, {0, BOT_Y - 12, 1, P_DIM, "MENU tune  \x7f\x80 move"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "LAST HEARD"}, {0, BOT_Y - 12, 1, P_KEYS, "MENU tune  \x7f\x80 move"}};
     uint8_t i, k;
     list_open();
     for (;;) {
@@ -1325,7 +1365,7 @@ __xdata char *groups_s(__xdata char *p, uint8_t word) __reentrant
 // result (kept: like a setting, it counts as soon as it is changed). CH GROUPS (link 0): a channel's groups; GROUP LINK (1): the groups a scan covers.
 static uint8_t group_pick(uint8_t g, uint8_t link) __reentrant
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "CH GROUPS"}, {0, BOT_Y - 12, 1, P_DIM, "MENU on/off  \x7f\x80 move"}, {0, 0, 1, P_ACC, "GROUP LINK"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "CH GROUPS"}, {0, BOT_Y - 12, 1, P_KEYS, "MENU on/off  \x7f\x80 move"}, {0, 0, 1, P_ACC, "GROUP LINK"}};
     uint8_t i, k;
     list_open();
     for (;;) {
@@ -1376,7 +1416,7 @@ static __xdata char *ch_row(uint8_t n) __reentrant   // "012 GMRS1    462.562" i
 
 static void delete_screen(void) __reentrant   // reentrant: its temporaries on the stack, not in DATA
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DELETE CH"}, {0, BOT_Y - 12, 1, P_DIM, "MENU delete  \x7f\x80 move"}, {0, BOT_Y - 24, 1, P_RED, "DELETE"}, {0, BOT_Y - 12, 1, P_FG, "MENU = YES"}, {0, BOT_Y, 1, P_FG, "V/M  = NO, keep it"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DELETE CH"}, {0, BOT_Y - 12, 1, P_KEYS, "MENU delete  \x7f\x80 move"}, {0, BOT_Y - 24, 1, P_RED, "DELETE"}, {0, BOT_Y - 12, 1, P_FG, "MENU = YES"}, {0, BOT_Y, 1, P_FG, "V/M  = NO, keep it"}};
     uint8_t n = sl_mem() ? sl_chn() : nxt(199, 1), k, sure = 0, i, c, cnt;
     if (!n) { note = "NO CHANNELS LOADED"; chime_no(); return; }
     remote_req |= REQ_REDRAW;
@@ -1422,7 +1462,7 @@ static const __code char abc[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
 
 static void name_screen(uint16_t at) __reentrant   // ch.name, saved to EEPROM at; titled as its menu item (CH NAME, CALL ID). The menu reloads ch after
 {
-    static const __code label_t l[] = {{0, BOT_Y - 24, 1, P_DIM, "0-9 or \x7f\x80 letter"}, {0, BOT_Y - 12, 1, P_DIM, "* < > #  MENU save"}, {0, BOT_Y, 1, P_DIM, "V/M back"}};
+    static const __code label_t l[] = {{0, BOT_Y - 24, 1, P_KEYS, "0-9 or \x7f\x80 letter"}, {0, BOT_Y - 12, 1, P_KEYS, "* < > #  MENU save"}, {0, BOT_Y, 1, P_KEYS, "V/M back"}};
     uint8_t i, k, last = 0, n = 0, age = 0;     // age: 10 ms rounds left to tap the same key again
     for (i = 0; ch.name[i]; i++) ;
     while (i < 8) ch.name[i++] = ' ';
@@ -2169,8 +2209,8 @@ static void dtmf_send(void) __reentrant
 static uint8_t code_len(uint8_t j) __reentrant { uint8_t n = 0; while (CODES[j++] < 16) n++; return n; }   // code at CODES + j
 static void codes_screen(void)
 {
-    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DTMF CODES"}, {0, BOT_Y - 12, 1, P_DIM, "MENU edit  \x7f\x80 move"},
-        {0, BOT_Y - 12, 1, P_DIM, "0-9 * #  MENU save"}, {0, BOT_Y, 1, P_DIM, "V/M delete digit"}};
+    static const __code label_t l[] = {{0, 0, 1, P_ACC, "DTMF CODES"}, {0, BOT_Y - 12, 1, P_KEYS, "MENU edit  \x7f\x80 move"},
+        {0, BOT_Y - 12, 1, P_KEYS, "0-9 * #  MENU save"}, {0, BOT_Y, 1, P_KEYS, "V/M delete digit"}};
     uint8_t i, k, n, j, ed = 0;             // ed: typing the code at the cursor
     for (i = 0; i < 8; i++) code_load(i);
     list_open();

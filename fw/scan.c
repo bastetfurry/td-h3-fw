@@ -32,8 +32,8 @@ static uint8_t height(uint8_t u, uint8_t b) __reentrant  // px for reading u on 
     return u >= 36 ? TALL : u + (u >> 1);
 }
 
-static const __code label_t scope_l[] = {{0, BOT_Y - 12, 1, P_DIM, "\x7f\x80 2/8 move  5"}, {0, BOT_Y, 1, P_DIM, "MENU tune  V/M exit"}};
-static const __code label_t ff_l[] = {{11, 0, 1, P_DIM, "FREQ FIND"}, {0, 30, 2, P_FG, "key radio"}, {0, 48, 2, P_FG, "nearby"}, {0, BOT_Y, 1, P_DIM, "MENU take  V/M exit"}};
+static const __code label_t scope_l[] = {{0, BOT_Y - 12, 1, P_KEYS, "\x7f\x80 2/8 move  5"}, {0, BOT_Y, 1, P_KEYS, "MENU tune  V/M exit"}};
+static const __code label_t ff_l[] = {{11, 0, 1, P_DIM, "FREQ FIND"}, {0, 30, 2, P_FG, "key radio"}, {0, 48, 2, P_FG, "nearby"}, {0, BOT_Y, 1, P_KEYS, "MENU take  V/M exit"}};
 
 // The six colours' tops, px over the foot: the first 12 dB wide, so the band's noise, sloped across
 // the window as it is on a real receiver, stays in it; then about 5 dB each.

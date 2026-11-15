@@ -226,11 +226,12 @@ extern __xdata uint16_t pal[8];
 #define c_ok pal[4]
 #define c_hi pal[5]
 #define c_bar pal[6]
-enum { P_BG, P_FG, P_DIM, P_ACC, P_OK, P_HI, P_BAR, P_RED };
+enum { P_BG, P_FG, P_DIM, P_ACC, P_OK, P_HI, P_BAR, P_RED, P_KEYS };   // P_KEYS: lcd_text draws a key line (keys_text: always in code memory), not a colour
 uint16_t theme_c(uint8_t i) __reentrant;    // main.c: colour i of the current theme's row
 #define H0 10                               // theme_c(H0) to theme_c(H0 + 5): the scope's scale, weak to strong
 typedef struct { uint8_t x, y, scale, col; const __code char *s; } label_t;   // fixed text on a screen
 void draw_labels(const __code label_t *l, uint8_t n) __reentrant;
+void keys_text(uint8_t x, uint8_t y, const __code char *s);
 
 uint8_t lights(uint8_t k) __reentrant;     // main.c: backlight timeout, flashlight; k, or 0 if it only lit the screen
 uint32_t wx_freq(uint8_t n) __reentrant;    // main.c: NOAA weather channel n (0-6), 10 Hz

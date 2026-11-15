@@ -186,7 +186,7 @@ def test_keypad_entry_uhf(cpu):
 
 def test_tx_allowed_band(cpu):
     cpu.key = 'PTT'
-    cpu.run(300_000)
+    cpu.run(500_000)                       # after the last digit's redraw (slower in the all-C build)
     p = pins(cpu)
     assert p['TXU'] and not p['TXV'] and not p['URX'] and not p['VRX'], p
     assert p['APC'] == CAL_LOW, p          # 446 MHz, low power: cal[5 + 4]
@@ -1412,7 +1412,7 @@ def test_up_down_all_groups(cpu):          # a channel in all eight groups (byte
 
 
 def test_hold_repeats(cpu):
-    press(cpu, 'UP', hold=2_500_000)       # 0.5 s, then a step every 0.1 s
+    press(cpu, 'UP', hold=3_000_000)       # 0.5 s, then a step every 0.1 s (the all-C build's redraws are slower)
     assert freq(cpu) >= 14652000 + 3 * 2500, freq(cpu)
 
 
@@ -1435,6 +1435,7 @@ def test_home_keys_line(cpu):              # the bottom line: the keys of the st
     press(cpu, '*')
     assert bottom() == {(0, 120): '* stop  V/M back  \x7f\x80'}, bottom()
     press(cpu, 'EXIT')
+    cpu.run(1_000_000)                     # the scan's way back drawn
     longpress(cpu, '#')
     assert bottom() == {(0, 120): 'hold # leave \x7f\x80 WX1-7'}, bottom()
     longpress(cpu, '#')
@@ -1690,7 +1691,7 @@ def scan_to_busy(cpu, on):               # scan the memories until it stops on c
 def test_scan_stops_for_save_and_tools(cpu):   # hold MENU on a scan stop saves that channel, though the call ends
     on = [True]
     scan_to_busy(cpu, on)
-    longpress(cpu, 'MENU')
+    press(cpu, 'MENU', hold=2_000_000)     # a scan's redraws take ~0.5M instructions here to see the key
     on[0] = False
     cpu.run(6_000_000)
     press(cpu, 'MENU')
