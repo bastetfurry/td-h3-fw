@@ -1448,6 +1448,18 @@ def test_home_keys_line(cpu):              # the bottom line: the keys of the st
     assert bottom() == {(0, 120): 'hold * to unlock'}, bottom()
 
 
+def test_scan_keys_line(cpu):              # a scan paused on a station shows its own keys, then the moving ones again
+    menu(cpu, 'REMOTE', ['UP', 'EXIT'])
+    def bottom(): return {r[1:3]: r[3] for r in remote_records_now(cpu) if r[0] == 't' and r[2] == 120}
+    on = [True]
+    scan_to_busy(cpu, on)
+    assert bottom() == {(0, 120): '* stay  hold V/M skip'}, bottom()
+    on[0] = False
+    assert cpu.run(20_000_000, until=lambda: freq(cpu) != 46256250), 'never moved on'
+    cpu.run(1_000_000)
+    assert bottom() == {(0, 120): '* stop  V/M back  \x7f\x80'}, bottom()
+
+
 def remote_records_now(cpu):               # one full screen through REMOTE
     cpu.uart_out.clear()
     cpu.uart_in.extend(b'S')
@@ -4163,6 +4175,7 @@ FIRST = [
 
 INDEPENDENT = [
     ('home: the bottom line shows the keys of its state', test_home_keys_line),
+    ('scanning: paused on a station, then moving, each with its keys', test_scan_keys_line),
     ('GROUP LINK: a scan covers several groups', test_group_link),
     ('CH GROUPS: a channel\'s groups set on the radio', test_ch_groups),
     ('CH GROUPS: all eight round-trips (byte 13 marks byte 15 ours)', test_ch_groups_all_eight),

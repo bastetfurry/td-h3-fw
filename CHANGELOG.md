@@ -6,7 +6,7 @@ starts with its part of this list.
 ## Next release
 
 - The home screen's bottom line now shows the keys that work right now: `* scan  # A/B  V/M ch` on
-  a frequency (`V/M vfo` on a channel), the scan's own keys while scanning, how to leave weather
+  a frequency (`V/M vfo` on a channel), the scan's own keys while scanning (`* stay  hold V/M skip` while it waits on a station), how to leave weather
   mode, how to turn monitor off, and how to unlock the keys. While you type a number it says
   `MENU ok`. The menu, the lists and the FM radio list their keys first and the arrows last.
 - Every key line on the screen draws its keys in the key's own colour: **MENU** blue, **V/M**

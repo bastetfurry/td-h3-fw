@@ -964,8 +964,8 @@ static void slot_drawn(uint8_t i);
 static void keys_line(void) __reentrant
 {
     static const __code char *const __code keys_s[] = {"hold * to unlock", "* stop  V/M back  \x7f\x80",
-        "hold # leave \x7f\x80 WX1-7", "hold 1  monitor off", "* scan  # A/B V/M vfo", "* scan  # A/B  V/M ch"};
-    uint8_t i = locked ? 0 : scanning ? 1 : wxm ? 2 : mon ? 3 : sl_mem() ? 4 : 5;
+        "hold # leave \x7f\x80 WX1-7", "hold 1  monitor off", "* scan  # A/B V/M vfo", "* scan  # A/B  V/M ch", "* stay  hold V/M skip"};
+    uint8_t i = locked ? 0 : scanning ? (t_hit ? 6 : 1) : wxm ? 2 : mon ? 3 : sl_mem() ? 4 : 5;
     if (entry_n && i) lcd_text(86, BOT_Y, "MENU ok", 1, P_KEYS);
     else lcd_text(0, BOT_Y, keys_s[i], 1, P_KEYS);
 }
@@ -2052,7 +2052,7 @@ static void scan(void)
     // A carrier on a tone-squelched channel gets up to 400 ms for its tone: CTCSS takes a few
     // cycles of a 67-254 Hz tone to decode, longer than the carrier wait above.
     if (since(&t_scan) < 80 && ch.rx_tone && bk_sql_open()) return;
-    fast = !dirty;                          // redraw just this slot, unless something else needs the whole screen
+    fast = !dirty && !t_hit;                // just this slot, unless something else needs the whole screen (leaving a pause: the key line)
     step_freq(sdir);
     stamp(&t_scan);                         // the dwell starts once retuned: the EEPROM reads come off it otherwise
 }

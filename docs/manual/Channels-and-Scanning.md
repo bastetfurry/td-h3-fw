@@ -160,7 +160,8 @@ scan, passes channels that are off the scan list (no `*`). A group with no chann
 2. **Start**: in memory mode (if the slot shows `VFO`, press **V/M** first), press **\***. It stops on any active channel and
    moves on when it goes quiet. It scans upward; **DOWN** turns it around to scan downward, **UP**
    back upward, and either moves on at once.
-3. **Stop** with **\*** or **V/M** (below).
+3. **Stop** with **\*** or **V/M** (below). The bottom line says which keys do what: `* stop  V/M back  ▲▼`
+   while it moves, and `* stay  hold V/M skip` while it waits on a station.
 
 **Where a scan stops.** The radio remembers where the scan started, and every station it stopped
 on while it ran: they go to the top of [Last heard](Tools#last-heard), newest first. Press **\*** to
