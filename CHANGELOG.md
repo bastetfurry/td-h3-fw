@@ -3,7 +3,7 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
-## Next release
+## 0.69.0
 
 - The home screen's bottom line now shows the keys that work right now: `* scan  # A/B  V/M ch` on
   a frequency (`V/M vfo` on a channel), the scan's own keys while scanning (`* stay  hold V/M skip` while it waits on a station), how to leave weather
