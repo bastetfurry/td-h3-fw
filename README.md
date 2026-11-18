@@ -5,7 +5,7 @@
 Open firmware for the TIDRADIO TD-H3 dual-band handheld (VHF/UHF, BK4819). It turns a cheap radio
 into one that works like the big Icom, Yaesu and Kenwood handhelds: a clear dual-slot screen, fast
 scanning that stops on what matters, weather radio and alerts, and transmit only where you allow
-it. About 53 KB of C (62 KB available); your channels, CHIRP and the factory calibration keep
+it. About 57 KB of firmware (62 KB available); your channels, CHIRP and the factory calibration keep
 working.
 
 > [!TIP]
@@ -135,7 +135,7 @@ Left out on purpose: scrambler, DTMF paging and remote kill, voice prompts, LSB.
 
 ```bash
 make -C fw all rxonly    # SDCC 4.5 in .toolchain/; fails if an image would reach the bootloader
-make -C fw test          # the real firmware in an 8051 emulator, about 90 tests
+make -C fw test          # the real firmware in an 8051 emulator, about 200 tests
 cd tools/tdh3 && go build && go test ./...   # tdh3: flash, update, backup, channels, settings, remote
 ```
 

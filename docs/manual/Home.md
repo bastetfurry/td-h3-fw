@@ -9,7 +9,7 @@ experience: words like *squelch*, *repeater* and *CTCSS* are explained in the [G
 
 ## Quick reference
 
-The everyday moves on one page. Short press = tap and let go; hold = about one second.
+The everyday moves on one page. Short press = tap and let go; hold = a little under a second.
 
 | I want to… | Press |
 |---|---|
@@ -85,8 +85,8 @@ For people working on the firmware: [Keeping this manual current](Keeping-This-M
 
 | Build | File | Transmits? |
 |---|---|---|
-| Receive-only | `td-h3-rx.bin` | Never. PTT shows **TX NOT ALLOWED**. |
-| Full | `td-h3.bin` | Only on the services on in TX BANDS (HAM and GMRS to start with), and only with the radio's factory calibration present. |
+| Receive-only | `td-h3-fw-VERSION-rx.bin` | Never. PTT shows **TX NOT ALLOWED**. |
+| Full | `td-h3-fw-VERSION.bin` | Only on the services on in TX BANDS (HAM and GMRS to start with), and only with the radio's factory calibration present. |
 
 MENU → VERSION (item 52) shows which version you're running, for example `0.55.2`.
 

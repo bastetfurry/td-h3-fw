@@ -17,7 +17,7 @@
 | Send touch-tones | While holding **PTT**: the digits, **\***, **#**; **MENU** then **1**-**8** sends a stored code |
 | Flashlight | **Side key 2** |
 
-A short press acts when you let go. A long press is about one second (it acts while you're still
+A short press acts when you let go. A long press is a little under a second (it acts while you're still
 holding). UP and DOWN act at once and repeat while held. Any key, PTT included, wakes the backlight.
 In the menu long presses do nothing; while you're typing a number, only hold **\*** (lock) works.
 

@@ -103,8 +103,8 @@ It also works on a radio with TIDRADIO's own firmware, without PC LINK.
 ### Backups tdh3 makes by itself
 
 Every command that writes to the radio saves the whole radio first, before it writes anything:
-`tdh3 channels import`, `set`, `move`, `clear`, `lock`, `unlock` and `copy`, `tdh3 reset` and
-`tdh3 settings restore`.
+`tdh3 channels import`, `set`, `move`, `clear`, `lock`, `unlock` and `copy`, `tdh3 reset`,
+`tdh3 restore`, `tdh3 settings restore`, and `tdh3 settings set` in PC LINK.
 The file goes in a folder called `backups` inside the folder the terminal is in (it's made if it
 isn't there), named with the date and time: `backups/td-h3-20261114-153012.bin` was made on
 14 November 2026 at 15:30:12. Two in the same second get `-2`, `-3` after the time, so a backup is
@@ -236,7 +236,7 @@ clears it). A value below zero, like the last one's, goes after `--`. A value th
 menu, types the item's number, presses **MENU**, steps **UP** or **DOWN** to the value, presses
 **MENU** to keep it and **V/M** to go home. It reads the screen after every key and stops, saying
 what it saw, if a key didn't do what it should. So it works even when you can't read the screen,
-for example after turning the brightness all the way down:
+for example in the dark or with the radio out of sight:
 
 ```bash
 tdh3 settings set BRIGHTNESS 10

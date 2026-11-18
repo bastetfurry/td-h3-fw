@@ -81,12 +81,12 @@ The build fails rather than produce something dangerous:
 ## Test
 
 ```bash
-cd fw && make test                 # everything, ~13 s under PyPy
+cd fw && make test                 # everything, ~15 s under PyPy
 cd fw && make test T="scan fm"     # only tests whose names contain these words
 ```
 
 `make test` uses PyPy when uv has it (`uv python install pypy3.11`, user-level, no system
-packages) and plain `python3` otherwise (about 6 minutes against PyPy's 16 s, on 24 threads). `test_fw.py` boots the real `.bin` in the emulator with a fixture EEPROM
+packages) and plain `python3` otherwise (about 6 minutes against PyPy's ~15 s, on 24 threads). `test_fw.py` boots the real `.bin` in the emulator with a fixture EEPROM
 (factory cal, channels 1-4 with scan groups) and checks what reaches the pins and buses. The
 first block runs in order on one booted CPU (boot compared live with stock, RX path, TX band
 plan, clone protocol); `INDEPENDENT` tests each get a fresh boot. All of them share one process
@@ -259,7 +259,7 @@ A PR to main merges only with all three jobs green and its branch up to date wit
 
 | Job | Runs | Fails when |
 |---|---|---|
-| `firmware` | `make -C fw all rxonly`, then `make -C fw test`, then `make -C fw cref` and `tools/asmdiff.py` | SDCC prints any warning (`--Werror`: an undeclared function or a constant that doesn't fit stops the build); an image reaches 0xF800 or has initialized XDATA; any test fails (no `all passed`); any resource is under its reserve (`budget: ... below reserve`); an asm function does anything its C original doesn't (`<fn> case <n> differs in ...`) |
+| `firmware` | `make -C fw all rxonly cref`, the suite at ASM=0, `tools/asmdiff.py`, then the suite and budget at ASM=1 | SDCC prints any warning (`--Werror`: an undeclared function or a constant that doesn't fit stops the build); an image reaches 0xF800 or has initialized XDATA; any test fails (no `all passed`); any resource is under its reserve (`budget: ... below reserve`); an asm function does anything its C original doesn't (`<fn> case <n> differs in ...`) |
 | `cli` | `go vet ./... && go test ./...` in `tools/tdh3` | a vet warning or a failing Go test |
 | `secrets` | TruffleHog over the whole history, the same two scans as the git hooks | a verified or unknown secret, or a plaintext `*_TOKEN`/`*_SECRET`/... value (`.forgejo/trufflehog.yaml`) |
 
@@ -556,4 +556,4 @@ which does all of this:
 ## Not yet checked on the radio
 
 FM seek/signal readback (above), a two-way radio signal opening the
-squelch with clear audio, TX power into a dummy load.
+squelch with clear audio.

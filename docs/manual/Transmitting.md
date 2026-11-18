@@ -22,7 +22,7 @@ covers your family) for GMRS. MURS and FRS need no licence, but the rules expect
 them, with low power (MURS 2 W, FRS 2 W, FRS channels 8-14 0.5 W: use ULTRA LOW). Listening needs no
 licence.
 
-The **receive-only build** (`td-h3-rx.bin`) can never transmit. The **full build** (`td-h3.bin`)
+The **receive-only build** (`td-h3-fw-VERSION-rx.bin`) can never transmit. The **full build** (`td-h3-fw-VERSION.bin`)
 transmits only on the services switched on in **MENU → TX BANDS** (HAM and GMRS to start with):
 
 | Service | Frequencies |

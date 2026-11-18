@@ -51,8 +51,8 @@ layer of calls costs real bytes. So:
 | `fw/fw.h` | `W`/`H` (128×128), the UART ports, the TX band bits | everything else |
 | `tools/emu51.py` | the peripheral models | the 8051 core |
 
-`AMP_ON` is used in six files. On a variant where the amplifier sits on another pin, `hw.h`
-changes and the other five files stay the same, because they only use the name.
+`AMP_ON` is used in seven files. On a variant where the amplifier sits on another pin, `hw.h`
+changes and the other six files stay the same, because they only use the name.
 
 ## Adding a variant
 

@@ -98,7 +98,7 @@ When it has nothing else to say, it shows the keys that work right now, and what
 | On the VFO (a frequency) | `* scan  # A/B  V/M ch`: **\*** scans, **#** swaps slot A and B, **V/M** goes to the channels |
 | On a memory channel | `* scan  # A/B V/M vfo`: the same, and **V/M** goes back to the VFO |
 | Scanning | `* stop  V/M back  ▲▼`: **\*** stops on what it found, **V/M** goes back where it started, **UP / DOWN** scan that way |
-| Scanning, stopped on a station | `* stay  hold V/M skip`: **\*** stays on it, hold **V/M** to take the channel off the scan list for good |
+| Scanning, stopped on a station | `* stay  hold V/M skip`: **\*** stays on it, hold **V/M** to take the channel off the scan list for good (on a frequency scan: skip that frequency until you switch the radio off) |
 | In weather mode | `hold # leave ▲▼ WX1-7`: hold **#** to go back, **UP / DOWN** step through the seven NOAA channels |
 | Listening with monitor on | `hold 1  monitor off` |
 | Locked | `hold * to unlock` |

@@ -107,7 +107,7 @@ Today they cannot. If you want them to, the rules stay the ones for the keypad: 
 operator and are responsible for what goes out, the radio's band limits apply, the RX-only
 build never transmits, and the TX timeout still cuts in. What it would take:
 
-- **A separate opt-in.** REMOTE gets a third value, `ON+TX`, in the existing `cfg.remote` byte.
+- **A separate opt-in.** REMOTE gets a third value, `ON+TX`, which takes one more settings bit.
   Plain `ON` keeps refusing PTT, so letting a computer see the screen never also lets it
   transmit. Flash 15-25 bytes (menu label and one compare), 0 RAM, 0 EEPROM.
 - **A dead-man timer.** A lost release byte has been seen on the radio. For PTT that would leave
