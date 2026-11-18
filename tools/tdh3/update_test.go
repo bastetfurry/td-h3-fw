@@ -227,3 +227,14 @@ func TestFetchUnpacksTarGz(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+// --rx picks the build to flash, so it can't go with --no-flash.
+func TestUpdateRxNeedsFlash(t *testing.T) {
+	port := ""
+	c := updateCmd(&port)
+	c.SetArgs([]string{"--rx", "--no-flash"})
+	c.SilenceUsage, c.SilenceErrors = true, true
+	if err := c.Execute(); err == nil {
+		t.Fatal("update --rx --no-flash ran; want it refused")
+	}
+}
