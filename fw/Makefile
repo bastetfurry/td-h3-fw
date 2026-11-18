@@ -76,8 +76,9 @@ budget: all rxonly cref
 
 # Manual screenshots from the real firmware (docs/manual/img), then the Forgejo wiki copy of docs/manual.
 # Their own receive-only build with the release number alone (0.39.0, never 0.39.0-14 from a branch
-# or a dirty tree), so the manual's pictures show a version someone could have on their radio.
-SHOTVER := $(shell git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null | sed 's/^v//')
+# or a dirty tree), so the manual's pictures show a version someone could have on their radio: the
+# CHANGELOG's newest version heading, so the release PR (which names it) remakes them for that release.
+SHOTVER := $(shell sed -n 's/^## \([0-9][0-9.]*\)$$/\1/p' ../CHANGELOG.md | head -1)
 screenshots: all rxonly
 	$(MAKE) VER=$(SHOTVER) DEFS=-DNO_TX OUT=td-h3-shots build/td-h3-shots.bin
 	FW_RX=build/td-h3-shots.bin $(PY) ../tools/screens.py capture
@@ -110,6 +111,7 @@ bump:
 	 case $(BUMP) in major) n=$$(($$1 + 1)).0.0;; minor) n=$$1.$$(($$2 + 1)).0;; patch) n=$$1.$$2.$$(($$3 + 1));; \
 	 *) echo "BUMP is patch, minor or major"; exit 1;; esac; \
 	 [ "$$(grep -m1 '^## ' ../CHANGELOG.md)" = "## $$n" ] || { echo "CHANGELOG.md: rename its \"## Next release\" to \"## $$n\" in a PR first"; exit 1; }; \
+	 ! git diff --quiet $$v HEAD -- ../docs/img/demo.gif || { echo "the pictures still show $${v#v}: run make demo in the release PR and commit them"; exit 1; }; \
 	 git tag -a v$$n -m v$$n && echo "tagged v$$n"
 	@$(MAKE) --no-print-directory all rxonly   # rebuild: the images built before the tag say "-1"
 

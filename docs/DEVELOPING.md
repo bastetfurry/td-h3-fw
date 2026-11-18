@@ -54,8 +54,9 @@ again after the merge, because the PR tested that commit.
 commit message.
 
 **A release is a tag on main**, made when there is something worth putting on radios, not after
-every merge. First a PR renames `## Next release` to the version `make bump` will tag (`## 0.65.0`);
-`make bump` refuses without it. Then:
+every merge. First a PR renames `## Next release` to the version `make bump` will tag (`## 0.65.0`)
+and runs `make -C fw demo`, which remakes every picture in the README and the manual showing that
+version; commit them in the same PR. `make bump` refuses without both. Then:
 
 ```bash
 git switch main && git pull
