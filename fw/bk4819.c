@@ -345,6 +345,7 @@ uint32_t bk_dcs_measured(void)
     return (uint32_t)(hi & 0x0FFF) << 12 | (lo & 0x0FFF);
 }
 
+#ifndef NO_FFIND
 // ---- freq find: the chip's frequency counter ----
 // REG_32 bit 0 starts a frequency scan (0x0245: scan on with the datasheet's longer gate time);
 // REG_0D bit 15 is set while it counts, bits 10:0 and REG_0E are the carrier in 10 Hz.
@@ -360,6 +361,7 @@ uint32_t bk_fscan_result(void)              // 10 Hz units, 0 while still counti
     if (hi & 0x8000) return 0;
     return (uint32_t)(hi & 0x07FF) << 16 | bk_read(0x0E);
 }
+#endif
 
 uint16_t bk_mic(void) { return bk_read(0x64) & 0x7FFF; }   // mic amplitude while transmitting
 

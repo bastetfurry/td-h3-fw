@@ -7,7 +7,9 @@
 
 __xdata chan_t ch;
 uint8_t sql_level;                          // 0-9, set by the UI
+#ifndef NO_WX
 uint8_t wx_watch;                           // set by main.c
+#endif
 int8_t freq_cal;                            // TCXO trim, 0.1 ppm
 static uint8_t cal_ok;                      // the factory TX power table at EEPROM 0x1F50 is there
 

@@ -4,6 +4,11 @@
 
 // Build switches (fw/Makefile sets them per image; none set is the full radio):
 //   NO_TX       receive only: radio_tx refuses, nothing can key up (make rxonly, xprobe)
+//   NO_FM       no FM broadcast radio (fm.c keeps fm_off for boot): MENU FM RADIO hidden, ~5 KB
+//   NO_WX       no NOAA weather: weather mode (long #, MENU WEATHER) and WX ALERT hidden and compiled
+//               out; cfg.wx stays in the settings block, ignored
+//   NO_SCOPE    no band scope (MENU SCOPE, long 3): ~1.1 KB
+//   NO_FFIND    no FREQ FIND (MENU FREQ FIND, long 7, the BK4819's counter): ~0.8 KB
 //   XRAM_PROBE  the splash shows how far XRAM goes (make xprobe)
 
 #include <stdint.h>
@@ -180,7 +185,11 @@ extern __xdata chan_t ch;
 enum { MOD_FM, MOD_AM, MOD_USB };           // receive only but FM; a record's bits 14.2 (1) and 13.3 (2), 0 = by band
 #define GRP_OURS 1                         // record byte 13 bits 1:0 (stock and CHIRP leave them 11 or 00): byte 15 is ours
 extern uint8_t sql_level;
+#ifdef NO_WX
+#define wx_watch 0                          // no weather mode: radio_tune never arms the 1050 Hz detector
+#else
 extern uint8_t wx_watch;                   // weather mode with WX ALERT on: radio_tune arms the 1050 Hz alert detector
+#endif
 extern uint8_t mic_gain;                   // 0-9 into stock's mic table
 extern int8_t freq_cal;                    // 0.1 ppm
 enum { PWR_ULP, PWR_LOW, PWR_MID, PWR_HIGH };   // lowest to highest; the record's bits differ (radio.c)

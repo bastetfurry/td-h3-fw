@@ -23,7 +23,10 @@ struct sc {
 #define WF 68                               // the waterfall: WF_H rows, one a sweep, row 0 at the top
 #define WF_H 36
 
+#if !defined(NO_SCOPE) || !defined(NO_FFIND)   // the scope and freq find (fw.h, build switches)
 static void freq_txt(uint32_t f) __reentrant { dec(s, f / 10, 7, 4); }   // "146.5200" from 10 Hz units, in s
+#endif
+#ifndef NO_SCOPE
 
 static uint8_t height(uint8_t u, uint8_t b) __reentrant  // px for reading u on the scale from b
 {
@@ -33,7 +36,6 @@ static uint8_t height(uint8_t u, uint8_t b) __reentrant  // px for reading u on 
 }
 
 static const __code label_t scope_l[] = {{0, BOT_Y - 12, 1, P_KEYS, "\x7f\x80 2/8 move  5"}, {0, BOT_Y, 1, P_KEYS, "MENU tune  V/M exit"}};
-static const __code label_t ff_l[] = {{11, 0, 1, P_DIM, "FREQ FIND"}, {0, 30, 2, P_FG, "key radio"}, {0, 48, 2, P_FG, "nearby"}, {0, BOT_Y, 1, P_KEYS, "MENU take  V/M exit"}};
 
 // The six colours' tops, px over the foot: the first 12 dB wide, so the band's noise, sloped across
 // the window as it is on a real receiver, stays in it; then about 5 dB each.
@@ -185,6 +187,9 @@ uint32_t scope(uint32_t center, uint16_t st) __reentrant
     }
 }
 
+#endif
+#ifndef NO_FFIND
+static const __code label_t ff_l[] = {{11, 0, 1, P_DIM, "FREQ FIND"}, {0, 30, 2, P_FG, "key radio"}, {0, 48, 2, P_FG, "nearby"}, {0, BOT_Y, 1, P_KEYS, "MENU take  V/M exit"}};
 // The BK4819 frequency counter: key a radio next to this one and it
 // reports the carrier. The TD-H3 has separate VHF and UHF front ends, so alternate them.
 static void show(uint32_t f) __reentrant { freq_txt(f); lcd_text(0, 76, s, 2, P_OK); }
@@ -234,3 +239,4 @@ uint32_t freq_find(void) __reentrant
         }
     }
 }
+#endif

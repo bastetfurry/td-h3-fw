@@ -11,6 +11,7 @@
 #define SDA_OUT() (P3TRIS = 0xEF)
 #define SDA_IN()  (P3TRIS = 0xAF)
 
+#ifndef NO_FM                               // NO_FM (the TNC build): no FM screen, only fm_off stays (boot)
 static const __code uint8_t table[72] = {
     0x92,0xE1, 0x00,0x08, 0x04,0x00, 0xC3,0xAD, 0x60,0x00, 0x42,0x12, 0x00,0x00, 0x00,0x00,
     0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x19,
@@ -18,6 +19,7 @@ static const __code uint8_t table[72] = {
     0xC4,0x00, 0xF7,0xCF, 0x12,0x14, 0x80,0x6F, 0x46,0x08, 0x00,0x86, 0x06,0x61, 0x00,0x00,
     0x10,0x9E, 0x23,0xC8, 0x04,0x06, 0x0E,0x1C,
 };
+#endif
 
 static void start(void)
 {
@@ -59,6 +61,7 @@ void fm_off(void)
     regs(off, 2);
 }
 
+#ifndef NO_FM                               // the FM screen
 // The FM screen's working buffers, in the screen buffer after the presets (pre, below): only fm_mode
 // and what it calls use them, and none of them nest.
 #define entry ((__xdata char *)scr_buf + 50)      // 12: fm_mode's typed MHz or message
@@ -93,6 +96,10 @@ static int8_t dbm(uint16_t f) __reentrant   // 100 kHz -> 10 Hz; under -128 dBm 
 // Weather alert (MENU WX ALERT), as the main screen's: every 5 s, 250 ms on the weather channel
 // for the 1050 Hz tone. The RDA5807 plays on; the next signal reading tunes the BK4819 back.
 // Out of fm_mode's own locals: there they cost 700 bytes of spills.
+#ifdef NO_WX                                // no weather: no look, never an alert (fw.h, build switches)
+#define wx_tick() 0
+#define wx_at 0
+#else
 static uint8_t wx_at;                       // MENU WX ALERT: weather channel 1-7, 0 = off
 static uint8_t wx_looks;
 
@@ -105,6 +112,7 @@ static uint8_t wx_tick(void)                // twice a second: 1 = the alert is 
     for (uint8_t i = 0; i < 25; i++) { delay_ms(10); if (bk_tone_heard(TONE_1050)) return wx_at = 0x80; }   // heard: 0x80 tells fm_mode's caller
     return 0;
 }
+#endif
 
 // Seek walks the US broadcast raster: 88.1-107.9 MHz on odd tenths. Fine tune (* #) and typed
 // frequencies still reach all of 76-108.
@@ -294,7 +302,11 @@ static void auto_presets(void)
     __xdata uint8_t *q;
     draw("AUTO PRESETS? 0 = YES", P_HI);
     for (j = 0; !(i = key_event()); )       // the weather alert look goes on while it asks
+#ifdef NO_WX
+        delay_ms(10);
+#else
         if (delay_ms(10), ++j == 50) { j = 0; if (wx_tick()) return; }
+#endif
     if (i == K_0) {
         for (p = 1; p <= 3; p++)
             for (i = j = 0, q = score; i < CHANS; i++, q++) {
@@ -349,7 +361,11 @@ uint8_t fm_mode(__xdata uint16_t *khz100, uint8_t wx)
     f = *khz100;
 
     if (f < 760 || f > 1080) f = 1019;
+#ifndef NO_WX
     wx_at = wx; wx_looks = 0;
+#else
+    (void)wx;
+#endif
     maps_ok = 0;                            // the screen buffer holds radio.c's bitmaps too (fw.h)
     bk_listen(1);
     pg = 0;
@@ -429,3 +445,4 @@ uint8_t fm_mode(__xdata uint16_t *khz100, uint8_t wx)
     *khz100 = f;
     return wx_at >> 7;
 }
+#endif

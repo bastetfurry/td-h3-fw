@@ -3396,7 +3396,9 @@ def test_tail_and_mic(cpu):                # mic gain 7 -> REG_7D; 55 Hz tail be
     menu(cpu, 'MIC', ['UP', 'UP', 'EXIT'])
     keys(cpu, ['4', '4', '6', '0', '0', '0'])
     cpu.key = 'PTT'
-    cpu.run(300_000)
+    for _ in range(20):                    # till it keys up: a redraw under way when PTT goes down delays
+        cpu.run(100_000)                   # it (~400K instructions at ASM=0)
+        if keyed(cpu): break
     assert cpu.bk.regs[0x7D] == 0xE940 | 0x0D, hex(cpu.bk.regs[0x7D])
     n = len(cpu.bk.writes)
     cpu.key = None

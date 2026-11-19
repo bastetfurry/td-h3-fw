@@ -83,7 +83,9 @@ static uint16_t index_of(uint16_t t) __reentrant   // inverse of tone_of
 }
 const __code uint8_t tots[] = {0, 30, 60, 120, 180};
 static const __code uint8_t light_s[] = {10, 30, 0};   // seconds on, 0 = always
+#ifndef NO_WX
 static const __code uint32_t wx_f[7] = {16240000, 16242500, 16245000, 16247500, 16250000, 16252500, 16255000};
+#endif
 static const __code uint8_t save_ms[] = {0, 24, 48, 96};  // battery saver sleep, 5 ms units (1:2, 1:4, 1:8)
 
 // Bands the VFO scan stays inside (10 Hz units), and their labels. After them, for SHIFT AUTO
@@ -118,7 +120,7 @@ __xdata char entry[8];
 // paging, which this MCU may not honor. The Makefile fails the build if any appear.
 uint8_t torch, peek_turn, nskip;
 __data uint8_t entry_n, menu, peek, saving;   // internal RAM: the most-used bytes, about 2 B smaller per access
-__bit tx, open, scanning, dirty, fast, locked, mon, rev, asleep, alert;   // bits: a test or set is half the code
+__bit tx, open, scanning, dirty, fast, locked, mon, rev, asleep;   // bits: a test or set is half the code
 static __bit vox, vox_arm, vox_tx;          // VOX: a voice found; armed; this TX is VOX's (vox_wants)
 #define SQL_HELD (!cfg.sql || mon)          // squelch 0 or monitor: the audio is open whatever comes in
 __xdata chan_t main_ch, other, prio_ch;   // other: the slot not selected
@@ -154,10 +156,26 @@ static uint16_t t_voice;                    // a voice prompt is playing: speake
 static uint8_t t_tail;                     // a 55 Hz squelch tail was heard: audio shut till the carrier goes
 static __bit low_batt;
 enum { PEEK_NONE, PEEK_OTHER, PEEK_PRIO, PEEK_WX };
-__bit wxm;                           // weather mode on
-static __xdata uint8_t wx_tone;              // weather mode: the 1050 Hz alert tone was heard at the last look
 __bit rang;                          // BELL: a call came in, the status bar shows a bell till a key
+// Weather (NOAA): weather mode and WX ALERT. NO_WX (fw.h, build switches) compiles them out: wxm, alert
+// and WX_ON are 0 there, so every test of them folds away. cfg.wx stays in the settings block;
+// cfg_load clears it, so draw_status's asm (which reads it) shows no WX flag.
+#ifdef NO_WX
+__bit wxm;                                  // always 0, but a bit, not a constant: asm/draw_slot.asm reads it,
+                                            // and draw_slot's C (ASM=0) must not fold its tests away (SDCC: unreachable)
+#define alert 0
+#define WX_ON 0
+#define WXM_OFF()
+#define ALERT_OFF()
+#else
+__bit wxm;                           // weather mode on
+__bit alert;                         // a weather alert heard: the full-screen alarm
+static __xdata uint8_t wx_tone;              // weather mode: the 1050 Hz alert tone was heard at the last look
 static __xdata uint8_t wx_ch;               // its NOAA channel, 0-6 for WX1-WX7, kept for next time
+#define WX_ON cfg.wx                        // MENU WX ALERT: its channel 1-7, 0 = off
+#define WXM_OFF() (wxm = 0)
+#define ALERT_OFF() (alert = 0)
+#endif
 
 void text_bg(uint8_t x, uint8_t y, uint8_t f, uint8_t b) __reentrant { lcd_text_bg(x, y, buf, 1, pal[f], pal[b]); }   // buf at scale 1 on colour b
 void text1(uint8_t x, uint8_t y, uint8_t c) __reentrant { text_bg(x, y, c, P_BG); }   // buf at scale 1
@@ -333,6 +351,9 @@ static void cfg_load(void)
     FIX((uint8_t)(cfg.mcal + 40) > 80, mcal, 0); FIX((uint8_t)(cfg.bcal + 50) > 100, bcal, 0);   // +-n: one compare
     FIX(cfg.rxt >= NTONE_MENU, rxt, 0); FIX(cfg.txt >= NTONE_MENU, txt, 0);
     FIX((uint16_t)(cfg.fm - 760) > 320, fm, 1019);   // 76-108 MHz
+#ifdef NO_WX
+    cfg.wx = 0;                             // no weather in this build: WX ALERT off (saved so, with any change)
+#endif
     for (i = 0; i < 2; i++)
         if (!slot_ok(&cfg.s[i])) slot_reset(i);
     if (!cfg.magic) {                       // defaults: channels loaded? then A and B start on the first two
@@ -424,6 +445,7 @@ void theme_apply(void)
     for (uint8_t i = 0; i < 8; i++) pal[i] = theme_c(i);
 }
 
+#ifndef NO_WX
 uint32_t wx_freq(uint8_t n) __reentrant { return wx_f[n]; }   // a call is 40 bytes smaller than wx_f[n]
 
 static void wx_fill(uint8_t n) __reentrant  // NOAA channel n (0-6) into `ch`: weather mode and the alert look
@@ -432,6 +454,7 @@ static void wx_fill(uint8_t n) __reentrant  // NOAA channel n (0-6) into `ch`: w
     ch.rx = wx_freq(n);
     ch.name[0] = 'W'; ch.name[1] = 'X'; ch.name[2] = '1' + n;
 }
+#endif
 
 static uint8_t on_rx(const __xdata uint32_t *f) __reentrant { return *f == ch.rx; }   // f is where ch listens
 static void from_ch(__xdata chan_t *d) __reentrant { xcpy(d, &ch, sizeof ch); }         // a copy of ch
@@ -443,7 +466,9 @@ static void fill_ch(uint8_t i) __reentrant
     __xdata slot_t *x = &cfg.s[i];
     int8_t b;
     uint8_t sh, o, u;
+#ifndef NO_WX
     if (wxm && i == cfg.act) { wx_fill(wx_ch); return; }   // weather mode: the slot itself is left as it was
+#endif
     if (!(x->mem && chan_load(x->chn))) {
         x->mem = 0;
         ch.rx = x->vfo;
@@ -485,7 +510,9 @@ static void load_ch(void)
 {
     sl = &cfg.s[cfg.act];
     sql_level = cfg.sql > 9 ? 2 : cfg.sql;  // S1-S9: a moderate chip squelch, the S-meter does the rest
+#ifndef NO_WX
     wx_watch = wxm ? cfg.wx : 0;
+#endif
     freq_cal = cfg.fcal;
     if (!keep_other) { fill_ch(!cfg.act); from_ch(&other); }
     fill_ch(cfg.act);
@@ -973,6 +1000,7 @@ static void keys_line(void) __reentrant
 static void draw_main(void)
 {
     uint8_t now_ok = rx_settled();          // before the slots' 40 ms: a retune this pass reads unsettled here
+#ifndef NO_WX
     if (alert) {
         lcd_clear();
         static const __code label_t l[] = {{1, 20, 3, P_RED, "WEATHER"}, {4, 50, 3, P_RED, "ALERT"}, {0, BOT_Y, 1, P_DIM, "any key to stop"}};
@@ -982,6 +1010,7 @@ static void draw_main(void)
         lcd_text(4, 86, buf, 2, P_FG);
         return;
     }
+#endif
     lcd_fillp(0, 9, W, 1, P_BAR);            // under the status bar
     for (uint8_t i = 0; i < 2; i++) {       // each slot, then the rows between it and the meter in its tint
         slot_drawn(i);                      // (bg when none): a slot heard or transmitting runs to the meter
@@ -1007,6 +1036,26 @@ static const __code char *const __code mnames[M_N] = {
     "LIGHT", "BRIGHTNESS", "THEME", "DIGITS", "KEY BEEP", "KEY LOCK", "BELL", "WX ALERT", "AUTO OFF", "BATT SAVE",
     "PC LINK", "REMOTE", "BLUETOOTH", "FREQ CAL", "METER CAL", "BATT CAL", "VERSION",
 };
+
+// Items a build hasn't got stay in the list's numbering (MENU 3 1 is WEATHER in every build), hidden:
+// the cursor steps over them and typing one's number is refused (fw.h, build switches).
+static uint8_t item_on(uint8_t i) __reentrant
+{
+    (void)i;                                // a build with every item never looks at it
+#ifdef NO_FM
+    if (i == M_FM) return 0;
+#endif
+#ifdef NO_WX
+    if (i == M_WXM || i == M_WX) return 0;
+#endif
+#ifdef NO_SCOPE
+    if (i == M_SCOPE) return 0;
+#endif
+#ifdef NO_FFIND
+    if (i == M_FF) return 0;
+#endif
+    return 1;
+}
 
 
 static void cal_s(uint8_t k)                // buf + 26: FREQ CAL "+0.5 ppm", METER CAL "+5 dB", "-12 dB", BATT CAL "+7.40 V"
@@ -1048,7 +1097,9 @@ static void menu_value(uint8_t i) __reentrant   // into the back half of buf, bu
     else if (i == M_GROUP || i == M_GLINK) { if (cfg.group) groups_s(v, 1); else cat(v, "SCAN LIST"); }
     else if (i == M_OFFS) dec(p, off_n(ch_uhf()) * 5, 4, 2);   // " 0.60": 10 kHz units
     else if (i == M_PRIO && cfg.prio) { cat(v, "CH"); u2s(v + 2, cfg.prio, 3); }
+#ifndef NO_WX
     else if (i == M_WX && cfg.wx) freq_s(v, wx_freq(cfg.wx - 1));
+#endif
     else if ((uint8_t)(i - M_FCAL) < 3) cal_s(i - M_FCAL);
     else if (i == M_CALL) { if (!name_read(CALL_ADDR, v)) cat(v, "OFF"); }
     else cat(v, i == M_VER ? VERSION : i == M_PRIO || i == M_WX ? "OFF" : ">");   // ">": the actions, SCOPE, CH NAME ...
@@ -1079,7 +1130,6 @@ static void list_row(uint8_t y, uint8_t sel, uint8_t k) __reentrant   // k: a P_
 
 // Sections: each starts at its first item, its name a dim row the cursor skips and the title above.
 #define NSEC 6
-#define NROW (M_N + NSEC)
 static const __code char *const __code sname[NSEC] = {"RECEIVE ", "TRANSMIT ", "SCAN ", "TOOLS ", "DISPLAY & SOUND ", "SETUP "};
 static const uint8_t __code sfirst[NSEC] = {M_SQL, M_POW, M_GROUP, M_SCOPE, M_LIGHT, M_PC};
 
@@ -1129,10 +1179,12 @@ static void menu_help(uint8_t i) __reentrant   // buf: what item i does, unpacke
 
 static void draw_menu(void) __reentrant     // rows paint their own background: no full clear
 {
-    uint8_t s = 0, i = 0, p, y;
+    uint8_t s = 0, i, p = 0, y, rows = NSEC;
     while (s < NSEC - 1 && sfirst[s + 1] <= menu) s++;
-    p = menu + s + 1;                       // the cursor's row in the list, headings included
-    p = p < MROWS / 2 ? 0 : p > NROW - 1 - MROWS / 2 ? NROW - MROWS : p - MROWS / 2;   // the first row shown
+    for (i = 0; i < M_N; i++) if (item_on(i)) { rows++; if (i < menu) p++; }   // rows shown; items above the cursor
+    p += s + 1;                             // the cursor's row in the list, headings included
+    p = p < MROWS / 2 ? 0 : p > rows - 1 - MROWS / 2 ? rows - MROWS : p - MROWS / 2;   // the first row shown
+    i = 0;
     mlast = menu;
     u2s(buf + 26, menu + 1, 2); buf[28] = '/'; buf[29] = '0' + M_N / 10; buf[30] = '0' + M_N % 10; buf[31] = 0;   // "12/45"
     if (entry_n) { buf[26] = entry[0]; buf[27] = '-'; }   // the first digit of an item number
@@ -1141,6 +1193,7 @@ static void draw_menu(void) __reentrant     // rows paint their own background: 
     text_pad = 2;                           // the rows' bands 12 px tall, 15 px apart
     for (s = 0, y = 15; y < 15 + 15 * MROWS; ) {
         uint8_t h = s < NSEC && i == sfirst[s];
+        if (!h && !item_on(i)) { i++; continue; }   // not in this build
         if (p) p--;
         else {
             menu_row(h ? 0x80 | s : i, y);
@@ -1192,7 +1245,7 @@ static uint8_t sl_chan(uint8_t n) __reentrant { SL.mem = 1; return SL.chn = n; }
 static void set_vfo(uint32_t f) __reentrant             // put f into the selected slot's VFO
 {
     if (!f) return;
-    wxm = 0;
+    WXM_OFF();
     SL.mem = 0;
     SL.vfo = f;
 }
@@ -1200,12 +1253,15 @@ static void set_vfo(uint32_t f) __reentrant             // put f into the select
 static void retune(void);
 static void codes_screen(void);
 
-static void fm_screen(void)
+#ifndef NO_FM
+static void fm_screen(void)                 // MENU FM RADIO, key 8
 {
-    if (fm_mode(&cfg.fm, cfg.wx)) { peek_turn = 9; t_peek = now() - 100; }   // the weather alert: look again now
+    if (fm_mode(&cfg.fm, WX_ON)) { peek_turn = 9; t_peek = now() - 100; }   // the weather alert: look again now
     save_soon();                            // the station you left on
 }
+#endif
 
+#ifndef NO_WX
 // Weather mode, as on the Kenwood and Yaesu handhelds: the selected slot listens to a NOAA channel
 // (UP/DOWN WX1-WX7) until long # again puts it back as it was. On the way in it checks all seven
 // and takes the strongest (WX SCAN), the last one used on a tie.
@@ -1226,6 +1282,7 @@ static void wx_mode(void) __reentrant   // from a key only: on_key has woken the
     }
     wx_tuned();
 }
+#endif
 
 // Last heard: the 8 newest frequencies the squelch opened on, newest first, with the memory
 // channel they were (0: none) and when, in 10 s spells since power-on (up10, counted with the
@@ -1347,7 +1404,7 @@ static uint8_t heard_screen(void)          // the picked row (lsel), or 0xFF for
 static void heard_tune(void) __reentrant   // the selected slot onto row lsel: its channel if it was one, else its frequency
 {
     const __xdata heard_t *h = lh + lsel;
-    if (h->chn && chan_used(h->chn)) { wxm = 0; sl_chan(h->chn); }
+    if (h->chn && chan_used(h->chn)) { WXM_OFF(); sl_chan(h->chn); }
     else set_vfo(h->f);
 }
 
@@ -1540,7 +1597,9 @@ static void menu_change(int8_t d) __reentrant
         load_prio();
         break;
     }
+#ifndef NO_SCOPE
     case M_SCOPE: sc_cal = cfg.mcal; set_vfo(scope(ch.rx, steps[cfg.step])); break;
+#endif
     case M_GRP: case M_TOVFO: case M_NAME:   // the channel afresh: ch may be reversed or weather
         if (!sl_mem() || !chan_load(sl_chn())) { note = "MEMORY CHANNELS ONLY"; chime_no(); leave = 1; }
         else if (menu == M_GRP) groups_screen();
@@ -1556,9 +1615,15 @@ static void menu_change(int8_t d) __reentrant
     case M_DEL: delete_screen(); break;
     case M_DTMF: codes_screen(); break;
     case M_CALL: name_read(CALL_ADDR, ch.name); name_screen(CALL_ADDR); break;
+#ifndef NO_FFIND
     case M_FF: set_vfo(freq_find()); break;
+#endif
+#ifndef NO_FM
     case M_FM: fm_screen(); break;
+#endif
+#ifndef NO_WX
     case M_WXM: wx_mode(); break;
+#endif
     case M_FCAL: case M_MCAL: case M_BCAL: {   // fcal, mcal, bcal: neighbours, +-100, +-40, +-50
         static const __code int8_t lim[] = {100, 40, 50};
         __xdata int8_t *c = &cfg.fcal + (uint8_t)(menu - M_FCAL);
@@ -1585,14 +1650,16 @@ static void unpeek(void)                    // back to the selected slot after a
     if (peek == PEEK_OTHER) from_ch(&other);
     if (peek) { to_ch(&main_ch); radio_tune(); open = 0; }   // squelch() opens it again (and its audio)
     peek = PEEK_NONE;
+#ifndef NO_WX
     if (alert) lcd_clear();                 // the full-screen alert: draw_main paints only its own cells
     alert = 0;
+#endif
 }
 
 static void retune(void)
 {
     peek = PEEK_NONE;
-    alert = vox = 0;                        // the chip starts listening afresh
+    vox = 0; ALERT_OFF();                   // the chip starts listening afresh
     load_ch();
     open = 0;
     heard = 0;
@@ -1671,7 +1738,7 @@ static void menu_jump(void)                 // the item number typed in the menu
 {
     uint8_t n = entry_value();
     entry_n = 0;
-    if (n && n <= M_N) menu = n - 1; else chime_no();
+    if (n && n <= M_N && item_on(n - 1)) menu = n - 1; else chime_no();
     draw_menu();
 }
 
@@ -1751,17 +1818,23 @@ static void on_long(uint8_t k) __reentrant
         break;
     case K_1: mon ^= 1; dirty = 1; break;                                      // monitor
     case K_2: if (sl_mem()) chan_power(sl_chn()); else item_step(M_POW, 1); retune(); break;   // a channel's own, saved
+#ifndef NO_SCOPE
     case K_3: scan_stop(); menu = M_SCOPE; menu_change(1); break;   // the tools: a scan would retune off their pick
+#endif
     case K_4: if (ch.mode == MOD_USB) cfg.sstep++; else item_step(M_STEP, 1); dirty = 1; save_soon(); break;
     case K_5: rev ^= 1; retune(); break;                                       // reverse
     case K_6:                                                                  // copy heard tone
         if (heard && !sl_mem()) { cfg.rxt = cfg.txt = index_of(heard); retune(); chime_ok(); }
         break;
+#ifndef NO_FFIND
     case K_7: scan_stop(); menu = M_FF; menu_change(1); break;
+#endif
     case K_8: scan_stop(); menu = M_FM; menu_change(1); break;
     case K_9: cfg.dw ^= 1; dirty = 1; save_soon(); break;
     case K_0: if (!sl_mem()) { cfg.narrow ^= 1; retune(); } break;
+#ifndef NO_WX
     case K_HASH: scan_stop(); wx_mode(); break;                              // weather mode in/out
+#endif
     }
 }
 
@@ -1781,7 +1854,9 @@ static void on_key(uint8_t k) __reentrant
     stamp(&t_key);
     if (note) { note = 0; dirty = 1; }
     if (asleep) { wake(); }
+#ifndef NO_WX
     if (alert) { unpeek(); dirty = 1; return; }
+#endif
     if (k == K_SIDE2) return;               // the flashlight: torch_run() times the presses, locked, in the menu, anywhere
     if (locked) {
         if (lng && k == K_STAR) { locked = 0; dirty = 1; chime_ok(); }
@@ -1806,7 +1881,7 @@ static void on_key(uint8_t k) __reentrant
         entry_n = 0;
         if (UPDOWN(k)) {
             if (medit) menu_change(DIR(k));
-            else { menu = wrap(menu, LIST_D(k), M_N); draw_menu(); }
+            else { do menu = wrap(menu, LIST_D(k), M_N); while (!item_on(menu)); draw_menu(); }
         } else if (k == K_MENU && M_ACT(menu)) menu_change(1);
         else if (k == K_MENU && menu != M_VER || k == K_EXIT && medit) { medit ^= 1; draw_menu(); }
         else if (k == K_EXIT) { menu = 0xFF; lcd_clear(); retune(); }
@@ -1821,7 +1896,9 @@ static void on_key(uint8_t k) __reentrant
     }
     if (lng && k == K_STAR) { locked = 1; scanning = 0; dirty = 1; return; }
     if (lng) { if (!entry_n) on_long(k); return; }
+#ifndef NO_WX
     if (wxm && (k <= K_9 || k >= K_EXIT)) wx_mode();   // a frequency, V/M, scan, A/B: weather mode ends first
+#endif
     if (scanning && sl_mem() && (uint8_t)(k - K_0) < 9) {    // while scanning: 1-8 pick a group, 0 the scan list
         uint8_t g = k == K_0 ? 0 : 1 << (k - K_1);
         if (empty(g)) {                     // say so, keep scanning the old one
@@ -1850,8 +1927,11 @@ static void on_key(uint8_t k) __reentrant
     switch (k) {
     case K_UP: case K_DOWN:                 // while scanning (Icom, Yaesu): scan that way, and move on now without the resume wait
         if (scanning) { no_wait(); sdir = DIR(k); }   // past the longest resume wait
+#ifndef NO_WX
         if (wxm) { wx_ch = (uint8_t)(wx_ch + (k == K_UP ? 1 : 6)) % (uint8_t)7; wx_tuned(); }   // weather mode: WX1-WX7
-        else step_freq(DIR(k));
+        else
+#endif
+        step_freq(DIR(k));
         break;
     case K_MENU: scanning = 0; menu = mlast; open_menu(); break;   // the receiver keeps on in the menu (Icom, Yaesu)
     case K_HASH: scanning = 0; rev = 0; cfg.act ^= 1; retune(); break;           // A/B
@@ -1962,16 +2042,21 @@ static void peek_at(uint8_t which, const __xdata chan_t *t) __reentrant
 {
     from_ch(&main_ch);
     if (t) to_ch(t);
+#ifndef NO_WX
     else { wx_fill(cfg.wx - 1); ch.rx_tone = TONE_1050; }   // the weather look
+#endif
     radio_tune();
     // Looks every 10 ms. Weather: 250 ms for the 1050 Hz alert (it lasts 8-10 s). Otherwise 30 ms, and
     // up to 150 ms while a carrier is at the squelch's open level (the chip's open delay). The slot's
     // RX tone must be heard in that time too: a carrier with the wrong tone doesn't take the receiver.
     for (uint8_t i = 1; i <= 25; i++) {
         delay_ms(10);
+#ifndef NO_WX
         if (which == PEEK_WX) {
             if (bk_tone_heard(TONE_1050)) { ch.rx_tone = 0; radio_tune(); alert = 1; goto take; }
-        } else if (i >= 3) {
+        } else
+#endif
+        if (i >= 3) {
             if (bk_sql_open() && (!ch.rx_tone || bk_tone_heard(ch.rx_tone))) goto take;
             if (i >= 15 || !bk_sql_near() && !bk_sql_open()) break;
         }
@@ -1988,15 +2073,18 @@ take:
 
 static void peeks(void)
 {
+#ifndef NO_WX
     if (peek == PEEK_WX) {                  // alarm until a key stops it
         if (since(&t_peek) > 300) { bk_chime(snd_alert); stamp(&t_peek); }
         return;
     }
+#endif
     if (peek) {
         if (!open && since(&t_open) > 400) { unpeek(); dirty = 1; }
         return;
     }
     if (since(&t_peek) < 100) return;
+#ifndef NO_WX
     if (wxm && peek_turn != 9) {            // weather mode: no looks away, as on the big rigs (9: FM heard an alert, fm_screen:
         uint8_t h = 0;                      // look now). WX ALERT is this channel: its own 1050 Hz detector (wx_watch),
         if (wx_watch) h = bk_tone_heard(TONE_1050);   // the alarm when the tone starts, not again while it lasts
@@ -2005,6 +2093,7 @@ static void peeks(void)
         wx_tone = h;
         return;
     }
+#endif
     // No look away for 3 s after a call drops: a fade closes the squelch for a moment, and a look
     // then missed the station's return and reopened late (heard as the TD-H3 cutting out next to a
     // UV-K5). Quansheng firmwares wait the same way (dual_watch_count_after_rx).
@@ -2017,8 +2106,11 @@ static void peeks(void)
     }
     stamp(&t_peek);
     peek_turn++;
+#ifndef NO_WX
     if (cfg.wx && peek_turn % 10 == 0) peek_at(PEEK_WX, 0);
-    else if (SQL_HELD) ;                    // squelch held open: the weather look only
+    else
+#endif
+    if (SQL_HELD) ;                         // squelch held open: the weather look only
     else if (cfg.prio && (peek_turn & 3) == 0) peek_at(PEEK_PRIO, &prio_ch);
     else if (cfg.dw && !scanning) peek_at(PEEK_OTHER, &other);
 }
@@ -2327,7 +2419,7 @@ static void ptt(void) __reentrant
         scanning = 0;
         if (peek) unpeek();
         if (asleep) wake();                 // battery saver: the receiver back on, or a refusal leaves it off 5 s
-        if (cfg.act != want) { cfg.act = want; rev = 0; wxm = 0; retune(); }
+        if (cfg.act != want) { cfg.act = want; rev = 0; WXM_OFF(); retune(); }
         if (!ch.tx) refuse("TX LOCKED CHANNEL");
         // Busy channel lockout. A retune (onto the other slot, or back from a dual-watch look) cleared open:
         // the chip's squelch, 30 ms on, says if the channel is busy.
@@ -2494,7 +2586,10 @@ void main(void)
     load_prio();
     load_ch();
     tlevel = 3;                             // the flashlight starts at high
-    tone_n = wx_ch = tinted[0] = tinted[1] = 0;   // XDATA outlives a software reset: as at power-on
+    tone_n = tinted[0] = tinted[1] = 0;     // XDATA outlives a software reset: as at power-on
+#ifndef NO_WX
+    wx_ch = 0;
+#endif
     t_save = 0;                             // nothing changed yet: never write settings at boot
     if (cfg.beep) bk_chime(snd_hello);
     else delay_ms(600);
@@ -2546,7 +2641,9 @@ void main(void)
             }
         }
 
+#ifndef NO_WX
         if (alert) menu = 0xFF;             // a weather alert takes the screen from the menu (dirty: peek_at)
+#endif
         if (menu == 0xFF) {
             if (dirty) {
                 if (fast) slot_drawn(cfg.act); else draw_main();

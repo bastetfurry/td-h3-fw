@@ -38,11 +38,13 @@ const __code note_t snd_batt[] = {
     {56, N_END, 0, 0},
 };
 
+#ifndef NO_WX
 // Weather alert (repeats): a two-tone siren, 1175 and 880 Hz, twice.
 const __code note_t snd_alert[] = {
     {0, N_HZ, 1175, 0}, {0, N_GAIN, 100, 1}, {12, N_HZ, 880, 0}, {12, N_HZ, 1175, 0},
     {12, N_HZ, 880, 0}, {12, N_GAIN, 0, 4}, {6, N_END, 0, 0},
 };
+#endif
 
 // BELL, a call after a quiet spell: G6 struck twice, like a desk bell. 300 ms.
 const __code note_t snd_bell[] = {
