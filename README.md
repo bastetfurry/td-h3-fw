@@ -53,7 +53,7 @@ for what the radio sends.
 
 ## Run it from your computer, or let an AI set it up
 
-Switch on REMOTE (**MENU**, **4** **7**, **MENU**, **UP**, **MENU**, then **V/M**) and the flasher you downloaded also works the radio
+Switch on REMOTE (**MENU**, **4** **8**, **MENU**, **UP**, **MENU**, then **V/M**) and the flasher you downloaded also works the radio
 over the same USB-C cable: it reads the screen as text, presses keys, tunes, picks channels and
 lists every setting. That's all an AI assistant that can run commands on your
 computer (Claude Code, Codex and the like) needs to set the radio up for you: *"put slot B on the
@@ -68,7 +68,7 @@ tdh3 remote settings                # every menu setting and its value
 tdh3 remote wait "squelch open"     # returns when someone talks on the frequency
 ```
 
-For these, put the radio in PC LINK instead (**MENU**, **4** **6**, **MENU**); **V/M** leaves it:
+For these, put the radio in PC LINK instead (**MENU**, **4** **7**, **MENU**); **V/M** leaves it:
 
 ```bash
 tdh3 channels import channels.csv   # load a channel list saved from CHIRP
@@ -115,6 +115,12 @@ can do and what to tell your assistant: [docs/AI-AGENTS.md](docs/AI-AGENTS.md).
   band, marine or government frequencies, and never without the radio's factory power calibration.
 - Automatic repeater shift from the US band plan, TX timeout with a warning, busy-channel lockout,
   per-channel TX lock, tail tone, VOX, touch-tone (DTMF) sending with stored codes.
+
+**Packet radio** (a separate firmware image, `make -C fw tnc`)
+- A KISS TNC for AX.25 at 1200 baud, over USB-C or Bluetooth: APRS and connected-mode packet (BBS,
+  nodes), frames up to 330 bytes, 4 queued. No hardware change: it hears through the beep's pin,
+  so it decodes less than a dedicated TNC. No 9600 baud, FEC or built-in beacon or digipeater.
+  The manual's TNC page lists what it does and doesn't.
 
 **Everything else**
 - FM broadcast radio with seek and presets; a spectrum scope; freq find (grab a nearby

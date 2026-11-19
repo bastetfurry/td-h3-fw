@@ -38,13 +38,13 @@ triple tap for strobe · any tap stops strobe or SOS.
 | # | Item | # | Item |
 |---|---|---|---|
 | 1 | SQUELCH | 30 | FM RADIO |
-| 2 | ATTENUATOR | 31 | WEATHER |
-| 13 | TX BANDS (where you may transmit) | 32 | LAST HEARD (who was on) |
-| 15 | TAIL TONE | 43 | WX ALERT |
-| 21 | SCAN GROUP | 44 | AUTO OFF |
-| 24 | DUAL WATCH | 46 | PC LINK (for CHIRP) |
-| 26 | GROUP LINK (scan several groups) | 47 | REMOTE (for the computer) |
-| 27 | CH GROUPS (a channel's scan groups) | 52 | VERSION |
+| 2 | ATTENUATOR | 32 | WEATHER |
+| 13 | TX BANDS (where you may transmit) | 33 | LAST HEARD (who was on) |
+| 15 | TAIL TONE | 44 | WX ALERT |
+| 21 | SCAN GROUP | 45 | AUTO OFF |
+| 24 | DUAL WATCH | 47 | PC LINK (for CHIRP) |
+| 26 | GROUP LINK (scan several groups) | 48 | REMOTE (for the computer) |
+| 27 | CH GROUPS (a channel's scan groups) | 53 | VERSION |
 
 **Flashing new firmware:** download the flasher for your computer from the newest release (the
 firmware is inside it) and open it with the radio plugged in. With the radio on and REMOTE on, press and hold
@@ -70,7 +70,7 @@ See [Updating the firmware](Updating).
 1. **[The home screen](Home-Screen)**: what every part of the display means.
 2. **[Keys](Keys)**: what each button does, short press and held.
 3. **[Channels and scanning](Channels-and-Scanning)**: load your channel list, scan groups.
-4. **[FM radio](FM-Radio)**: listen to broadcast stations.
+4. **[FM radio](FM-Radio)**: listen to broadcast stations. (The [TNC](TNC) firmware has no FM radio: long **8** opens its packet radio modem.)
 5. **[Tools](Tools)**: scope, freq find, last heard, weather alert, flashlight, keypad lock.
 6. **[Menu](Menu)**: every setting.
 7. **[Transmitting](Transmitting)**: licences, what's allowed, and the safety limits built in.
@@ -88,7 +88,7 @@ For people working on the firmware: [Keeping this manual current](Keeping-This-M
 | Receive-only | `td-h3-fw-VERSION-rx.bin` | Never. PTT shows **TX NOT ALLOWED**. |
 | Full | `td-h3-fw-VERSION.bin` | Only on the services on in TX BANDS (HAM and GMRS to start with), and only with the radio's factory calibration present. |
 
-MENU → VERSION (item 52) shows which version you're running, for example `0.55.2`.
+MENU → VERSION (item 53) shows which version you're running, for example `0.55.2`.
 
 ![The VERSION item at the bottom of the menu](img/version.png)
 

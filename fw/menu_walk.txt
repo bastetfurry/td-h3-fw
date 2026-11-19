@@ -2058,6 +2058,7 @@ mem GRP >
 mem SCOPE >
 mem FF >
 mem FM >
+mem TNC >
 mem WEATHER >
 mem LH >
 mem NAME >

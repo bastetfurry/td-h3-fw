@@ -6,12 +6,12 @@
 |---|---|
 | See the band around me (scope) | Hold **3**; **5** slow sweep, **MENU** tunes to the cursor, **V/M** leaves |
 | Find a nearby radio's frequency (freq find) | Hold **7**; **MENU** takes it, **V/M** leaves |
-| See who was on lately | **MENU**, **3** **2** (LAST HEARD), **MENU** |
-| Watch for weather alerts | **MENU**, **4** **3** (WX ALERT), **MENU**, **UP** / **DOWN** to your channel, **MENU** |
+| See who was on lately | **MENU**, **3** **3** (LAST HEARD), **MENU** |
+| Watch for weather alerts | **MENU**, **4** **4** (WX ALERT), **MENU**, **UP** / **DOWN** to your channel, **MENU** |
 | Stop the weather alarm | Any key |
 | Flashlight on / off | Tap **side key 2** |
 | Lock / unlock the keys | Hold **\*** (**PTT**, **side key 1** and the flashlight still work locked, unless KEY LOCK is KEYS+PTT) |
-| Connect to a computer | **MENU**, **4** **6** (PC LINK), **MENU** |
+| Connect to a computer | **MENU**, **4** **7** (PC LINK), **MENU** |
 | Record the screen on a computer, as a GIF | REMOTE on, then `tdh3 remote record my.rec` and `tdh3 remote replay my.rec -o my.gif` ([below](#recording-the-screen)) |
 
 ## Scope (hold 3)
@@ -84,7 +84,7 @@ silences it for good even while the tone goes on. AUTO OFF's sleep stops the che
 
 ## Last heard
 
-MENU → LAST HEARD (item 32), MENU: the last 8 stations the radio heard, newest first
+MENU → LAST HEARD (item 33), MENU: the last 8 stations the radio heard, newest first
 (`nothing heard yet` until it has heard one). Each row shows
 the memory channel (`M12`) when it was one, the frequency, and how long ago (`<1m`, `14m`, `2h`).
 UP/DOWN lights a row, MENU tunes the selected slot there, V/M goes back. The list is kept until you
@@ -121,7 +121,7 @@ possible" sound and do nothing else; **PTT**, **side key 1** and the flashlight 
 work. Locking stops a scan.
 
 To carry the radio in a pocket or bag without it transmitting by accident, set **MENU** → KEY LOCK
-(item 41) to **KEYS+PTT**. Then the lock stops **PTT** and **side key 1** too: they show
+(item 42) to **KEYS+PTT**. Then the lock stops **PTT** and **side key 1** too: they show
 **LOCKED: NO TX** and play the "not possible" sound. The flashlight still works. Hold **\*** to unlock
 as usual.
 
@@ -145,7 +145,7 @@ With the radio plugged into a computer, `tdh3` (the flasher you downloaded) can 
 screen shows while you use the radio, and turn it into an animated picture to share or to show
 someone how to do something.
 
-1. Switch on REMOTE: **MENU**, **4** **7**, **MENU**, **UP** so it says **ON**, **MENU**, then
+1. Switch on REMOTE: **MENU**, **4** **8**, **MENU**, **UP** so it says **ON**, **MENU**, then
    **V/M** to leave the menu.
 
    ![REMOTE switched on](img/remote.png)

@@ -24,6 +24,8 @@ CFLAGS = -DVERSION='"$(VER)"' --Werror --disable-warning 110 -mmcs51 --model-lar
          --noinvariant --fomit-frame-pointer --no-xinit-opt \
          --code-size 0xF800 --xram-size 4096 --iram-size 256 $(DEFS) $(CDEFS)
 SRC = main.c sys.c lcd.c eeprom.c bk4819.c keys.c radio.c clone.c fm.c scan.c remote.c glyphs.c tones.c help.c
+# The TNC build (make tnc): AFSK 1200 receive on P4.6 and KISS over USB-C or Bluetooth
+SRC += $(if $(findstring -DTNC,$(DEFS)),afsk.c tnc.c)
 # Hand-written assembly (DEVELOPING.md, Assembly): fw/asm/<fn>.asm, each with its C original behind
 # #ifdef C_<FN>. ASM=1 (the default since v0.59.2) links the asm, but a
 # function whose C changed since its asm was written is "asm stale" and comes from C (tools/asmcheck.py).
@@ -31,13 +33,22 @@ SRC = main.c sys.c lcd.c eeprom.c bk4819.c keys.c radio.c clone.c fm.c scan.c re
 # CFUN="a b" builds those from C even at ASM=1. make asm: build/td-h3-asm.bin; make cref:
 # build/td-h3-c.bin, the all-C image the asm is compared against (tools/asmdiff.py).
 ASM ?= 1
-LINK := $(shell python3 ../tools/asmcheck.py link $(ASM) "$(CFUN)")
-CDEFS := $(shell python3 ../tools/asmcheck.py defs $(ASM) "$(CFUN)")
+LINK := $(shell python3 ../tools/asmcheck.py link $(ASM) "$(CFUN)" "$(SRC)")
+CDEFS := $(shell python3 ../tools/asmcheck.py defs $(ASM) "$(CFUN)" "$(SRC)")
 AS := $(if $(SDCC_HOME),$(SDCC_HOME)/bin/,)sdas8051
 
 all: build/td-h3.bin
 rxonly:
 	$(MAKE) DEFS=-DNO_TX OUT=td-h3-rx build/td-h3-rx.bin
+# make tnc -> build/td-h3-tnc.bin: MENU TNC (item 31, key 8) is an APRS/KISS TNC (tnc.c, afsk.c,
+# docs/HARDWARE.md "P4.6 as an audio input"); it transmits within TX BANDS, as PTT does. No FM radio
+# no weather, no SCOPE and no FREQ FIND in this image (fw.h, build switches): the flash goes to the TNC.
+# make tnc-rx -> build/td-h3-tnc-rx.bin: the same, receive only.
+TNC_DEFS = -DTNC -DNO_FM -DNO_WX -DNO_SCOPE -DNO_FFIND
+tnc:
+	$(MAKE) DEFS="$(TNC_DEFS)" OUT=td-h3-tnc build/td-h3-tnc.bin
+tnc-rx:
+	$(MAKE) DEFS="$(TNC_DEFS) -DNO_TX" OUT=td-h3-tnc-rx build/td-h3-tnc-rx.bin
 # make xprobe -> build/td-h3-xprobe-rx.bin: receive-only; the splash shows how far XRAM goes (main.c xram_probe)
 xprobe:
 	$(MAKE) DEFS="-DNO_TX -DXRAM_PROBE" OUT=td-h3-xprobe-rx build/td-h3-xprobe-rx.bin
@@ -54,7 +65,7 @@ $(shell echo '$(LINK)' | cmp -s - build/$(OUT).asm || echo '$(LINK)' > build/$(O
 build/asm.inc: $(SRC) fw.h hw.h ../tools/asmcheck.py
 	python3 ../tools/asmcheck.py inc && touch $@
 
-build/$(OUT).bin: $(SRC) $(LINK:%=asm/%.asm) $(if $(LINK),build/asm.inc) fw.h hw.h build/version build/$(OUT).asm Makefile   # Makefile: new flags rebuild everything
+build/$(OUT).bin: $(SRC) $(LINK:%=asm/%.asm) $(if $(LINK),build/asm.inc) fw.h hw.h afsk.h build/version build/$(OUT).asm Makefile   # Makefile: new flags rebuild everything
 	@mkdir -p $(O)
 	@printf '%s\n' $(SRC) | xargs -P 0 -I @ $(SDCC) $(CFLAGS) -c @ -o $(O)/   # all at once: one sdcc per file
 	@for f in $(LINK); do $(AS) -plosgffw $(O)/$$f.rel asm/$$f.asm || exit 1; done
@@ -68,7 +79,8 @@ build/$(OUT).bin: $(SRC) $(LINK:%=asm/%.asm) $(if $(LINK),build/asm.inc) fw.h hw
 # The emulator is a tight Python loop: PyPy runs the suite ~20x faster (16 s vs 6 min on 24 threads).
 # uv python install pypy3.11 puts it in ~/.local/share/uv; plain python3 works too.
 PY := $(shell uv python find pypy3.11 2>/dev/null || echo python3)
-test: all rxonly
+# The TNC tests boot build/td-h3-tnc.bin; it fits only with the asm (ASM=1), so at ASM=0 they skip.
+test: all rxonly $(if $(filter 0,$(ASM)),,tnc)
 	$(PY) test_fw.py $(T)
 	$(if $(T)$(NOBUDGET),,@$(MAKE) -s cref >/dev/null && python3 ../tools/budget.py)
 
@@ -121,4 +133,4 @@ bump:
 clean:
 	rm -rf build
 
-.PHONY: all rxonly xprobe cref asm test budget screenshots demo wiki bump clean
+.PHONY: all rxonly tnc tnc-rx xprobe cref asm test budget screenshots demo wiki bump clean

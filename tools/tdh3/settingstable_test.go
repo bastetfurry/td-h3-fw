@@ -152,7 +152,7 @@ func TestSettingsTableMatchesTheFirmware(t *testing.T) {
 	}
 
 	// Every menu item is in the table or is one of these, which hold no value of their own.
-	noValue := []string{"M_DTMF", "M_GLINK", "M_GRP", "M_SCOPE", "M_FF", "M_FM", "M_WXM", "M_LH", "M_NAME", "M_TOVFO", "M_DEL", "M_PC", "M_VER"}
+	noValue := []string{"M_DTMF", "M_GLINK", "M_GRP", "M_SCOPE", "M_FF", "M_FM", "M_TNC", "M_WXM", "M_LH", "M_NAME", "M_TOVFO", "M_DEL", "M_PC", "M_VER"}
 	byNum := map[int]setting{}
 	for _, s := range settingsTable {
 		byNum[s.num] = s

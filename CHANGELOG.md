@@ -3,6 +3,26 @@
 What changed on the radio and in the tdh3 flasher, newest release first. Each release's page
 starts with its part of this list.
 
+## Next release
+
+- A TNC for APRS and packet radio, in a firmware image of its own (`make -C fw tnc`, or `tnc-rx`
+  receive only; the normal firmware has no TNC). MENU 31 TNC, or hold **8**, turns the radio into a
+  modem that a phone or computer uses over the USB-C cable (KISS, 38400 baud) or Bluetooth: it sends
+  the app's packets within TX BANDS and passes every packet it hears, APRS and connected mode alike,
+  up to AX.25's full 330 bytes. The screen shows the frequency (type a new one, or step with **UP**
+  / **DOWN**), the last station heard and its signal, and the send state and queue in fixed places;
+  the lights show packets coming in, decoded, lost and sent. Up to 4 packets wait to go out in one
+  transmission (MAXFRAME 4). It takes KISS TXDELAY, P, SLOTTIME, TXTAIL, FULLDUPLEX and ACKMODE and
+  answers Dire Wolf's `TXBUF:` and `TNC:` queries. It waits while a packet is coming in, even one
+  too weak to decode, and while SQUELCH (any setting, S-meter or 0) sees a carrier. No hardware
+  change: it hears the audio through the beep's pin. The TNC firmware has no FM radio, weather,
+  SCOPE or FREQ FIND, to make room. The manual's TNC page has the details.
+- The TNC has its own menu item, 31 TNC, so **menu items 31-52 are now 32-53** in every firmware:
+  PC LINK is **4** **7**, REMOTE **4** **8**, BLUETOOTH **4** **9**, VERSION **5** **3**. Update
+  `tdh3` together with the firmware: an older `tdh3 settings set` finds the numbers moved and stops
+  rather than change the wrong item. An item a firmware hasn't got keeps its number and is skipped:
+  31 TNC in the normal firmware; 30 FM RADIO, 32 WEATHER and 44 WX ALERT in the TNC firmware.
+
 ## 0.69.0
 
 - The home screen's bottom line now shows the keys that work right now: `* scan  # A/B  V/M ch` on

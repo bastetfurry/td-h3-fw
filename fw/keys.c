@@ -42,11 +42,18 @@ uint8_t key_scan(void)
     uint8_t c, g, k = K_NONE;
     // PC LINK turns remote off: 38400 for CHIRP. Armed, the loader's 115200, so the flasher is already
     // at its speed when PTT restarts into it; 1 Mbaud again once the arming lapses.
+#ifdef TNC
+    if (tnc_run) c = USB_CLONE;             // the TNC owns the port: KISS at 38400 (tnc.c), no REMOTE
+    else
+#endif
     c = remote ? (loader_armed ? USB_LOADER : USB_REMOTE) : USB_CLONE;
     if (c != speed) {
         uart_usb_fast(speed = c);
         if (!remote) mirror = loader_armed = 0;   // remote_tick no longer runs to let them lapse
     }
+#ifdef TNC
+    if (!tnc_run)
+#endif
     if (remote) { remote_tick(); remote_poll(); if (rkey) return rkey; }   // a late byte is judged after the let-go
     rows_off();
     g = cols();

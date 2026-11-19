@@ -12,7 +12,7 @@
 | Lock / unlock the keys | Hold **\*** (**PTT**, **side key 1** and the flashlight still work locked) |
 | Hear everything, noise too | Hold **1**; again to stop |
 | NOAA weather | Hold **#** |
-| FM broadcast radio | Hold **8** |
+| FM broadcast radio ([TNC](TNC) in the TNC firmware) | Hold **8** |
 | Talk | Hold **PTT** (slot A) or **side key 1** (slot B) |
 | Send touch-tones | While holding **PTT**: the digits, **\***, **#**; **MENU** then **1**-**8** sends a stored code |
 | Flashlight | **Side key 2** |

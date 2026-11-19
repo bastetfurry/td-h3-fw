@@ -5,6 +5,7 @@
 - [Keys](Keys)
 - [Channels and scanning](Channels-and-Scanning)
 - [FM radio](FM-Radio)
+- [TNC (packet radio)](TNC)
 - [Tools](Tools)
 - [Menu](Menu)
 - [Transmitting](Transmitting)

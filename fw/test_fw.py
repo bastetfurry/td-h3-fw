@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
 from emu51 import CPU  # noqa: E402
 
 FW = os.path.join(HERE, 'build', 'td-h3.bin')
+FW_TNC = os.path.join(HERE, 'build', 'td-h3-tnc.bin')     # make tnc: MENU 31 TNC, long 8 (no FM radio, no weather)
 FW_RX = os.path.abspath(os.environ.get('FW_RX', os.path.join(HERE, 'build', 'td-h3-rx.bin')))   # screenshots: build/td-h3-shots.bin
 STOCK = os.path.join(HERE, '..', 'stock', 'td-h3', '250317', 'H3_250317.BIN')
 
@@ -351,7 +352,7 @@ def test_call_id_off(cpu):                 # CALL ID: OFF on a new radio (EEPROM
     keys(cpu, ['MENU', '2', '0'])
     cpu.run(1_000_000)
     rows = remote_texts(cpu)
-    assert any(r.startswith('TRANSMIT') and r.endswith('20/52') for r in rows), rows
+    assert any(r.startswith('TRANSMIT') and r.endswith('20/53') for r in rows), rows
     assert any(r.startswith('CALL ID') and r.endswith('OFF') for r in rows), rows
     keys(cpu, ['EXIT'])
     cpu.bk.writes = Stamped(cpu)
@@ -604,7 +605,7 @@ def test_dcs(cpu):
 
 
 MENU = ['SQUELCH', 'ATT', 'COMP', 'NARKHZ', 'BW', 'MODE', 'STEP', 'RXT', 'POWER', 'SHIFT', 'OFFS', 'TXT', 'TXB', 'TOT', 'TAIL', 'MIC', 'VOX', 'VOXD', 'DTMF', 'CALL',   # fw/main.c's M_ order
-        'GROUP', 'PAUSE', 'RESUME', 'DW', 'PRIO', 'GLINK', 'GRP', 'SCOPE', 'FF', 'FM', 'WEATHER', 'LH', 'NAME', 'TOVFO', 'DEL',
+        'GROUP', 'PAUSE', 'RESUME', 'DW', 'PRIO', 'GLINK', 'GRP', 'SCOPE', 'FF', 'FM', 'TNC', 'WEATHER', 'LH', 'NAME', 'TOVFO', 'DEL',
         'LIGHT', 'BRIGHT', 'THEME', 'DIGITS', 'BEEP', 'KLOCK', 'BELL', 'WX', 'APO', 'SAVE', 'PC', 'REMOTE', 'BT', 'FCAL', 'MCAL', 'BCAL', 'VER']
 
 
@@ -612,7 +613,7 @@ def num(item):                             # the two digits that jump to an item
     return list('%02d' % (MENU.index(item) + 1))
 
 
-ACTIONS = {'DTMF', 'CALL', 'SCOPE', 'FF', 'FM', 'WEATHER', 'PC', 'LH', 'GRP', 'GLINK', 'DEL', 'TOVFO', 'NAME'}
+ACTIONS = {'DTMF', 'CALL', 'SCOPE', 'FF', 'FM', 'TNC', 'WEATHER', 'PC', 'LH', 'GRP', 'GLINK', 'DEL', 'TOVFO', 'NAME'}
 
 
 def menu(cpu, item, action=()):            # go to an item by its number; action: UP/DOWN changes it, EXIT leaves
@@ -4169,6 +4170,683 @@ def test_rxonly_never_transmits(cpu):
     tx_refused(cpu)
 
 
+
+def kiss_frames(out):                      # KISS data frames in the bytes the radio sent, unescaped
+    frames = []
+    for part in bytes(out).split(b'\xc0'):
+        if part[:1] == b'\x00' and len(part) > 1:
+            frames.append(part[1:].replace(b'\xdb\xdc', b'\xc0').replace(b'\xdb\xdd', b'\xdb'))
+    return frames
+
+
+def test_tnc_kiss(cpu):                    # TNC build: P4.6's 1-bit audio decoded, out as KISS, all put back on leaving
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afskmodel
+    n = afskmodel.synth()                  # one APRS frame through the P4.6 front end's model
+    model = afskmodel.Demod51()
+    for v in n:
+        model.sample(v)
+    assert len(model.frames) == 1
+    cpu = boot(FW_TNC)
+    cpu.uart_baud = 38400                  # the TNC's KISS speed (the computer's end must match)
+    menu(cpu, 'TNC', ['UP'])               # TNC (MENU on it, as FM's tests): the bias walk ends at once (P4.6 reads high), sampling starts
+    assert cpu.bk.regs.get(0x48) == 0xB3FF and cpu.bk.regs.get(0x2B) == 0x0100, 'TNC: RX AF gain and no de-emphasis'
+    assert cpu.bk.regs.get(0x43) == 0x4848, 'TNC: receives narrow'
+    assert not cpu.sfr[0xA4] & 0x40, 'TNC: P4.6 an input'
+    assert cpu.sfr[0xC8] == 0x11 and cpu.sfr[0xB8] & 0x20 and cpu.sfr[0xA8] & 0x20 and cpu.sfr[0xCF] & 0x80, \
+        'TNC: Timer2 reads P4.6, at high priority'
+    assert not cpu.sfr[0x88] & 0x40, 'TNC: Timer1 stopped while receiving (t2_isr sets its flag)'
+    cpu.uart_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0            # the capture into P4.6 from the next Timer1 interrupt on
+    ok = cpu.run(len(n) * 1500, until=lambda: cpu.p46_isr > len(n) or b'\xc0' in cpu.uart_out[-1:] and kiss_frames(cpu.uart_out))
+    got = kiss_frames(cpu.uart_out)
+    assert got == model.frames, 'KISS %s, the model decodes %s (%d samples in)' % ([f.hex() for f in got], [f.hex() for f in model.frames], cpu.p46_isr)
+    cpu.p46 = None
+    cpu.run(2_000_000)                     # the screen counts it
+    keys(cpu, ['EXIT'])
+    cpu.run(1_000_000)
+    assert cpu.sfr[0xA4] & 0x40, 'P4.6 the beep output again'
+    assert not cpu.sfr[0xC8] & 3 and not cpu.sfr[0xA8] & 0x20 and not cpu.sfr[0xB8] & 0x20, 'Timer2 stopped, its priority back'
+    assert cpu.bk.regs.get(0x48) == 0xB2A8 and cpu.bk.regs.get(0x2B) == 0, 'RX audio back to stock gain and filters'
+
+
+
+def test_tnc_back_to_back(cpu):            # TNC: two frames on one shared flag both reach the host, in order
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afsksim
+    first = kiss_frame(b'>first \xc0\xdb escaped, ' + b'x' * 120)[0]    # long: its KISS takes ~40 ms
+    second = kiss_frame(b'>right behind it')[0]
+    # 2200 Hz 9.5 dB over 1200: one slicer decodes, so the other can't take the second frame for it
+    # (the build before streaming KISS from the interrupts gave the first frame only)
+    n = afsksim.front_end(*afsksim.modulate([first, second], between=1, twist=3))
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.uart_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0
+    cpu.run(len(n) * 3000, until=lambda: cpu.p46_isr > len(n) or len(kiss_frames(cpu.uart_out)) == 2 and cpu.uart_out[-1:] == b'\xc0')
+    got = kiss_frames(cpu.uart_out)
+    assert got == [first, second], 'KISS %s (%d samples in)' % ([f.hex() for f in got], cpu.p46_isr)
+    cpu.p46 = None
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_fx25_plain(cpu):              # TNC: the AX.25 frame inside FX.25 decodes, whatever the tag (no FEC)
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afsksim
+    # Tag 2 (RS(144,128)) holds 8 ones in a row, an abort, and only one flag follows it: the build
+    # that collected bytes only while DCD was valid (3 flags since the abort) dropped the frame
+    f = kiss_frame(b'>inside FX.25 tag 2')[0]
+    n = afsksim.front_end(*afsksim.modulate([f], pre=(0x26FF60A600CC8FDE).to_bytes(8, 'little')))
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.uart_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0
+    cpu.run(len(n) * 3000, until=lambda: cpu.p46_isr > len(n) or len(kiss_frames(cpu.uart_out)) == 1 and cpu.uart_out[-1:] == b'\xc0')
+    got = kiss_frames(cpu.uart_out)
+    assert got == [f], 'KISS %s (%d samples in)' % ([g.hex() for g in got], cpu.p46_isr)
+    cpu.p46 = None
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_connected(cpu):               # TNC: connected mode's frames (SABM, I, RR) reach the host, not just UI
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afsksim
+    addr = lambda c, last, cr: bytes(x << 1 for x in c.split('-')[0].ljust(6).encode()) + \
+        bytes([0x60 | cr << 7 | (int((c.split('-') + ['0'])[1]) << 1) | last])
+    hdr = addr('N0BBS', 0, 1) + addr('N0CALL', 1, 0)   # a command from N0CALL to the BBS
+    frames = [hdr + b'\x3f',                        # SABM, P: 15 bytes, the shortest there is
+              hdr + b'\x00\xf0' + b'line 1 of the file \xc0\xdb\\r', # I, N(S) 0 N(R) 0, PID F0
+              hdr + b'\x21']                        # RR, N(R) 1
+    n = afsksim.front_end(*afsksim.modulate(frames, between=8))
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.uart_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0
+    cpu.run(len(n) * 3000, until=lambda: cpu.p46_isr > len(n) or len(kiss_frames(cpu.uart_out)) == 3 and cpu.uart_out[-1:] == b'\xc0')
+    got = kiss_frames(cpu.uart_out)
+    assert got == frames, 'KISS %s (%d samples in)' % ([f.hex() for f in got], cpu.p46_isr)
+    cpu.p46 = None
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_bluetooth(cpu):               # TNC with BLUETOOTH on: KISS both ways on UART0 (the module), none on USB-C
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afskmodel
+    n = afskmodel.synth()                  # one APRS frame through the P4.6 front end's model
+    model = afskmodel.Demod51()
+    for v in n:
+        model.sample(v)
+    cpu = boot(FW_TNC)
+    keys(cpu, list('144800'))
+    cpu.run(1_000_000)
+    menu(cpu, 'BT', ['UP'])
+    cpu.uart_baud = 38400
+    menu(cpu, 'TNC', ['UP'])
+    assert cpu.sfr[0xA8] & 0x10, 'TNC over Bluetooth: ES0 on'
+    cpu.uart_out.clear(); cpu.uart0_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0
+    cpu.run(len(n) * 3000, until=lambda: cpu.p46_isr > len(n) or b'\xc0' in cpu.uart0_out[-1:] and kiss_frames(cpu.uart0_out))
+    assert kiss_frames(cpu.uart0_out) == model.frames, 'KISS on UART0 %s' % [f.hex() for f in kiss_frames(cpu.uart0_out)]
+    assert not cpu.uart_out, 'KISS on USB-C too'
+    cpu.p46 = None
+    frame, kiss = kiss_frame(b'>TD-H3 TNC over Bluetooth')
+    start = len(cpu.bk.writes)
+    cpu.uart0_in.extend(kiss)              # from the phone through the module: on the air
+    ok = cpu.run(400_000_000, until=lambda: any(w == (0x70, 0) for w in cpu.bk.writes[start:]))
+    assert ok, 'never keyed up and down'
+    got, nbits = tnc_air_frames(cpu, start)
+    assert got == [frame], 'on the air %s (%d bits)' % ([f.hex() for f in got], nbits)
+    cpu.run(6_000_000)
+    keys(cpu, ['EXIT'])
+    cpu.run(1_000_000)
+    assert not cpu.sfr[0xA8] & 0x10, 'ES0 off again: PC LINK polls UART0'
+
+
+def tnc_running(cpu):                      # the TNC screen open: Timer2 reads P4.6
+    return cpu.sfr[0xC8] == 0x11
+
+
+def amp(cpu):                              # P4.3: the speaker amplifier on
+    return cpu.sfr[0xC0] >> 3 & 1
+
+
+def test_tnc_speaker_after_tx(cpu):        # TNC: key #'s speaker stays on across a send (radio_tx turned it off)
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    press(cpu, '#')
+    assert amp(cpu), 'key #: no speaker'
+    start = len(cpu.bk.writes)
+    cpu.uart_in.extend(kiss_frame(b'>speaker test')[1])
+    assert cpu.run(400_000_000, until=lambda: any(w == (0x70, 0) for w in cpu.bk.writes[start:])), 'never sent'
+    cpu.run(8_000_000)                     # the tail, back to receive
+    assert amp(cpu), 'the speaker off after sending'
+    press(cpu, '#')
+    assert not amp(cpu), 'key # again: still on'
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_backlight(cpu):               # TNC: LIGHT's timeout as on the home screen (it was always on); the first
+    if not os.path.exists(FW_TNC):         # key on a dark screen only lights it; a signal in keeps it lit
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    menu(cpu, 'LIGHT', ['DOWN', 'EXIT'])   # 10 s
+    tnc_open(cpu, '144800')
+    cpu.run(12 * 800_000)
+    assert cpu.xram[0xF140] == 0, 'backlight still %d in the TNC' % cpu.xram[0xF140]
+    press(cpu, '#')
+    assert cpu.xram[0xF140] and not amp(cpu), 'the first key on the dark screen: lit %d, speaker %d' % (cpu.xram[0xF140], amp(cpu))
+    cpu.bk.busy = lambda f: True           # a signal in: the squelch open
+    cpu.run(14 * 800_000)
+    assert cpu.xram[0xF140], 'dark with a signal in'
+    cpu.bk.busy = None
+    cpu.run(14 * 800_000)
+    assert cpu.xram[0xF140] == 0, 'still lit after the signal'
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_key_lock(cpu):                # TNC: hold * locks every key, side keys and the flashlight too; hold * again unlocks
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    longpress(cpu, '*')
+    press(cpu, 'EXIT'); press(cpu, '#'); press(cpu, 'SIDE2'); cpu.run(2_000_000)
+    assert tnc_running(cpu) and not amp(cpu) and not torch(cpu), 'locked: left %d, speaker %d, torch %d' % (not tnc_running(cpu), amp(cpu), torch(cpu))
+    longpress(cpu, '*')
+    press(cpu, '#')
+    assert amp(cpu), 'unlocked: key # did nothing'
+    press(cpu, 'EXIT'); cpu.run(2_000_000)
+    assert not tnc_running(cpu), 'unlocked: V/M did not leave'
+
+
+def test_tnc_leds(cpu):                    # TNC: left green while a packet comes in, right green for one decoded,
+    if not os.path.exists(FW_TNC):         # right red for one that came in and didn't decode
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afskmodel
+    good = afskmodel.synth()
+    bad = list(good)
+    for i in range(len(good) // 2 - 100, len(good) // 2 + 100):   # the frame's middle scrambled: its preamble lights DCD, its FCS fails
+        bad[i] = 8 - bad[i]
+    for n, want, name in ((good, (1, 0), 'decoded'), (bad, (0, 1), 'lost')):
+        cpu = boot(FW_TNC)
+        tnc_open(cpu, '144800')
+        cpu.bk.busy = lambda f: True       # the packet's carrier: the squelch open (the DCD light goes through it)
+        cpu.p46, cpu.p46_isr = n, 0
+        seen = []
+        while cpu.p46_isr <= len(n) + 3000:    # and past the capture: half ones, as the servo aims
+            if cpu.p46_isr > len(n): cpu.bk.busy = None   # the carrier gone
+            cpu.run(20_000)
+            seen.append((cpu.p46_isr, leds(cpu)))
+        cpu.p46 = None
+        incoming = [i for i, l in seen if l[0]]
+        assert incoming and min(incoming) < 9000, '%s: no left green while it came in (%s)' % (name, incoming[:3])
+        assert (any(l[1] for _, l in seen), any(l[3] and not l[1] for _, l in seen)) == want, \
+            '%s: right green %d, right red %d' % ((name,) + (any(l[1] for _, l in seen), any(l[3] and not l[1] for _, l in seen)))
+        assert not any(l[2] for _, l in seen), '%s: left red while receiving' % name
+        keys(cpu, ['EXIT'])
+
+
+def test_tnc_dual_watch(cpu):              # TNC with DUAL WATCH on: it stays on A (no looks at B), and dual watch comes back after
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    menu(cpu, 'DW', ['UP', 'EXIT'])        # on A (146.520), watch B (446.000)
+    cpu.uart_baud = 38400
+    menu(cpu, 'TNC', ['UP'])               # the TNC on A
+    cpu.bk.busy = lambda f: f == 44600000
+    n = len(cpu.bk.writes)
+    cpu.run(10_000_000)
+    assert tnc_running(cpu) and 44600000 not in tuned(cpu, n), 'the TNC looked at B: %s' % sorted(set(tuned(cpu, n)))
+    keys(cpu, ['EXIT', 'EXIT'])            # the TNC, then the menu
+    cpu.run(4_000_000)
+    assert freq(cpu) == 44600000, 'dual watch not back after the TNC: on %d' % freq(cpu)
+    cpu.bk.busy = None
+
+
+def tnc_air_frames(cpu, start):           # the TNC's bits on the air since bk.writes[start]: one per Timer1
+    """interrupt, a 0 where it wrote REG_71 (NRZI: the tone swapped); then HDLC: frames with a good FCS."""
+    marks = [m for m in cpu.t1_marks if m >= start]
+    bits = [0 if any(r == 0x71 for r, _ in cpu.bk.writes[a:b]) else 1 for a, b in zip(marks, marks[1:])]
+    frames, cur, ones, sr, inside = [], [], 0, 0, False
+    for b in bits:
+        sr = (sr >> 1 | b << 7) & 0xFF
+        if sr == 0x7E:
+            if inside and len(cur) >= 8 * 17:
+                frames.append(bytes(sum(cur[i + j] << j for j in range(8)) for i in range(0, len(cur) // 8 * 8, 8)))
+            cur, ones, inside = [], 0, True
+            continue
+        if b:
+            ones += 1
+        else:
+            if ones == 5:
+                ones = 0
+                continue
+            ones = 0
+        cur.append(b)
+    out = []
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afskmodel
+    for f in frames:                       # the closing flag's first bits went into cur: whole bytes, FCS last
+        if len(f) > 2 and afskmodel.crc16(f[:-2]) == f[-2] | f[-1] << 8:
+            out.append(f[:-2])
+    return out, len(bits)
+
+
+def kiss_frame(info, path=b''):            # a UI frame from N0CALL as KISS: FEND, 0, the escaped frame, FEND
+    addr = lambda c, last: bytes(x << 1 for x in c.split('-')[0].ljust(6).encode()) + \
+        bytes([0x60 | (int((c.split('-') + ['0'])[1]) << 1) | last])
+    f = addr('APDR16', 0) + addr('N0CALL', 1) + b'\x03\xf0' + info
+    return f, b'\xc0\x00' + f.replace(b'\xdb', b'\xdb\xdd').replace(b'\xc0', b'\xdb\xdc') + b'\xc0'
+
+
+def tnc_open(cpu, mhz):                    # the selected slot on mhz, then MENU -> TNC
+    keys(cpu, mhz)
+    cpu.run(1_000_000)
+    cpu.uart_baud = 38400
+    menu(cpu, 'TNC', ['UP'])
+
+
+def menu_at(cpu, path=None):               # the menu's cursor: an M_ index, 0-based (fw/main.c, __data menu)
+    path = path or FW                      # the map lists it without the D: of its area's first symbol
+    mapfile = os.path.join(os.path.dirname(path), os.path.basename(path)[:-4], 'fw.map')
+    a = next(int(f[-3 if f[0] == 'D:' else 0], 16) for f in map(str.split, open(mapfile)) if f[-2:-1] == ['_menu'])
+    return cpu.iram[a]
+
+
+def test_menu_hidden_items(cpu):           # an item this build hasn't got keeps its number, hidden: skipped, refused when typed
+    i = MENU.index
+    menu(cpu, 'FM')
+    assert menu_at(cpu) == i('FM'), menu_at(cpu)
+    press(cpu, 'DOWN')
+    assert menu_at(cpu) == i('WEATHER'), 'DOWN from FM RADIO: %d, not WEATHER (TNC is the TNC build\'s)' % menu_at(cpu)
+    keys(cpu, ['%d' % ((i('TNC') + 1) // 10), '%d' % ((i('TNC') + 1) % 10)])   # 3 1
+    assert menu_at(cpu) == i('WEATHER'), 'typing TNC\'s number moved to %d' % menu_at(cpu)
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_build_menu(cpu):              # TNC build: its own item 31 and key 8; no FM radio, weather, scope, freq find
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    i = MENU.index
+    ee = eeprom()
+    ee[0x1FC0 + 15] = 1                    # WX ALERT on WX1 (162.400), as a normal build may have left it
+    cpu = boot(FW_TNC, ee=ee)
+    start = len(cpu.bk.writes)
+    cpu.run(12_000_000)                    # a WX ALERT look comes every 5 s (the 10th peek turn)
+    longpress(cpu, '#'); cpu.run(3_000_000)   # weather mode in a normal build
+    assert 16240000 not in tuned(cpu, start), 'the TNC build looked at 162.400 (weather)'
+    menu(cpu, 'GRP')
+    assert menu_at(cpu, FW_TNC) == i('GRP'), menu_at(cpu, FW_TNC)
+    for want in ('TNC', 'LH'):             # CH GROUPS, TNC, then LAST HEARD: SCOPE, FREQ FIND, FM, WEATHER skipped
+        press(cpu, 'DOWN')
+        assert menu_at(cpu, FW_TNC) == i(want), 'DOWN: %s, not %s' % (MENU[menu_at(cpu, FW_TNC)], want)
+    for gone in ('SCOPE', 'FF', 'FM', 'WEATHER', 'WX'):   # typed: refused, the cursor stays
+        n = i(gone) + 1
+        keys(cpu, ['%d' % (n // 10), '%d' % (n % 10)])
+        assert menu_at(cpu, FW_TNC) == i('LH'), 'typing %s (%d) moved to %s' % (gone, n, MENU[menu_at(cpu, FW_TNC)])
+    keys(cpu, ['EXIT'])
+    cpu.run(2_000_000)
+    tnc = symbol(FW_TNC, '_tnc_mode')
+    cpu.key = '8'                          # key 8 opens the TNC (the FM radio's in a normal build)
+    assert cpu.run(20_000_000, until=lambda: cpu.pc == tnc), 'key 8 never opened the TNC'
+    cpu.key = None
+    cpu.run(30_000_000)
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_tx(cpu):                      # TNC: a frame from the host goes out on the air, bit for bit
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    frame, kiss = kiss_frame(b'>TD-H3 TNC TX test \xc0\xdb escaped')   # FEND and FESC inside: KISS escapes
+    start = len(cpu.bk.writes)
+    cpu.uart_in.extend(kiss)
+    ok = cpu.run(400_000_000, until=lambda: any(w == (0x70, 0) for w in cpu.bk.writes[start:]))
+    assert ok, 'never keyed up and down'
+    assert (0x30, 0xC1FE) in cpu.bk.writes[start:], 'transmitter on'
+    i = cpu.bk.writes.index((0x70, 0x8000 | 0x60 << 8), start)   # tone 1 on
+    w = cpu.bk.writes[:i]
+    last = lambda r, w=w: next(v for q, v in reversed(w) if q == r)
+    assert last(0x48) == 0xB2A8 and last(0x2B) == 0, 'TX with the receive tweaks on'
+    assert last(0x30) == 0xC3FA, 'TX link for tones: AF DAC on, mic ADC off (REG_30 C3FA)'
+    assert last(0x43) == 0x3628, 'TNC: sends wide'
+    assert last(0x19) == 0x9041, 'TX AGC off for the tones (REG_19 bit 15)'
+    assert last(0x51) == 0, 'no CTCSS/DCS under the AFSK (REG_51 0)'
+    tx_end = cpu.bk.writes.index((0x70, 0), i)
+    assert all(v == 0x3B20 for q, v in cpu.bk.writes[i:tx_end] if q == 0x50) and \
+        last(0x50, cpu.bk.writes[:tx_end]) == 0x3B20, 'TX audio muted (REG_50 BB20) while the tones play: a silent carrier'
+    got, nbits = tnc_air_frames(cpu, start)
+    assert got == [frame], 'on the air %s, sent %s (%d bits)' % ([f.hex() for f in got], frame.hex(), nbits)
+    cpu.run(6_000_000)                     # the tail, the receiver back as the TNC has it
+    assert cpu.bk.regs.get(0x48) == 0xB3FF and cpu.bk.regs.get(0x2B) == 0x0100, 'TNC receive settings back'
+    assert cpu.bk.regs.get(0x43) == 0x4848, 'TNC: narrow again after sending'
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_tx_fcs_unshared(cpu):         # TNC: the FCS of a frame to send is computed with sampling off
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    # afsk_fcs shares crc_byte (its c and b at fixed XDATA addresses) with afsk_bit, which the sample
+    # interrupts run: computed while sampling, a slicer collecting hiss wrote over them and a right
+    # frame went out with a wrong FCS (on the air 2026-11-18: 1 in 3 at 178 B). Every afsk_fcs, the
+    # first frame's before key-up and the queued ones' while the one before goes out, must see the
+    # Timer2 interrupt off: its reads hand Timer1 the samples (Timer1 is the bit clock then).
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    fcs = symbol(FW_TNC, '_afsk_fcs')
+    for i in range(3):
+        cpu.uart_in.extend(kiss_frame(b'>FCS with sampling off %d' % i)[1])
+    start, calls = len(cpu.bk.writes), 0
+    while cpu.run(400_000_000, until=lambda: cpu.pc == fcs or (0x70, 0) in cpu.bk.writes[-4:]) and cpu.pc == fcs:
+        assert not cpu.sfr[0xA8] & 0x20, 'afsk_fcs (call %d) with the Timer2 interrupt (P4.6 reads) on' % (calls + 1)
+        calls += 1
+        cpu.run(1)
+    assert calls >= 3, 'afsk_fcs called %d times for 3 frames' % calls
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_tx_queue(cpu):                # TNC: a window of frames from the host all goes out, in order, in one key-up
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    # One frame at a time used to be all: the next KISS frame while one waited was dropped, and a
+    # connected-mode window of 4 broke down on the air (88 resends, 2026-11-18). Now 4 queue (MAXFRAME 4;
+    # XRAM is 4 KB) and follow each other after one flag; a 5th while 4 wait is dropped.
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.uart_in.extend(b'\xc0\x03\xff\xc0')     # KISS SLOTTIME 2.55 s: all 5 are in before the first try
+    frames = [kiss_frame(b'>queued %d' % i) for i in range(5)]
+    start = len(cpu.bk.writes)
+    for f, k in frames:
+        cpu.uart_in.extend(k)
+    ok = cpu.run(800_000_000, until=lambda: any(w == (0x70, 0) for w in cpu.bk.writes[start:]))
+    assert ok, 'never keyed up and down'
+    got, nbits = tnc_air_frames(cpu, start)
+    assert got == [f for f, k in frames[:4]], 'on the air %s (%d bits)' % ([g[16:].decode(errors='replace') for g in got], nbits)
+    assert cpu.bk.writes[start:].count((0x30, 0xC1FE)) == 1, 'more than one key-up for the queue'
+    cpu.run(30_000_000)
+    assert cpu.bk.writes[start:].count((0x30, 0xC1FE)) == 1, 'the 5th frame went out'
+    # Frames landing while it keys up and sends: every byte taken (radio_tx's EEPROM read kept the
+    # interrupts off ~1 ms, and the KISS bytes meanwhile were lost), every frame out in order.
+    cpu.uart_in.extend(b'\xc0\x03\x0a\xc0')     # SLOTTIME back to 100 ms
+    lost = cpu.uart_lost
+    frames = [kiss_frame(b'>overlap %d' % i) for i in range(4)]
+    start = len(cpu.bk.writes)
+    for f, k in frames[:2]:
+        cpu.uart_in.extend(k)
+    assert cpu.run(400_000_000, until=lambda: (0x43, 0x3628) in cpu.bk.writes[start:]), 'never keyed up'
+    for f, k in frames[2:]:                # into the key-up: radio_tx, then the tones
+        cpu.uart_in.extend(k)
+    for _ in range(40):                    # till all 4 are out (two key-ups, or one)
+        cpu.run(20_000_000)
+        got = tnc_air_frames(cpu, start)[0]
+        if len(got) >= 4 and not cpu.uart_in:
+            break
+    assert cpu.uart_lost == lost, '%d KISS bytes lost while sending' % (cpu.uart_lost - lost)
+    assert got == [f for f, k in frames], 'on the air %s' % [g[16:].decode(errors='replace') for g in got]
+    keys(cpu, ['EXIT'])
+
+
+def tnc_air_bits(cpu, start):              # the TNC's data bits on the air since bk.writes[start] (tnc_air_frames)
+    marks = [m for m in cpu.t1_marks if m >= start]
+    return ''.join('0' if any(r == 0x71 for r, _ in cpu.bk.writes[a:b]) else '1' for a, b in zip(marks, marks[1:]))
+
+
+def test_tnc_long_frame_rx(cpu):           # TNC: a frame of AX.25's full length (here 316 B) reaches the host whole
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afsksim
+    f = kiss_frame((b'>long ' + bytes(range(65, 91)) * 12)[:300])[0]   # the buffers held 178 B before
+    n = afsksim.front_end(*afsksim.modulate([f]))
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.uart_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0
+    cpu.run(len(n) * 3000, until=lambda: cpu.p46_isr > len(n) or len(kiss_frames(cpu.uart_out)) == 1 and cpu.uart_out[-1:] == b'\xc0')
+    got = kiss_frames(cpu.uart_out)
+    assert got == [f], 'KISS %s (%d samples in)' % ([len(g) for g in got], cpu.p46_isr)
+    cpu.p46 = None
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_kiss_commands(cpu):           # TNC: ACKMODE's ack after the frame is out; TXTAIL's flags; SETHARDWARE ignored
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    # SETHARDWARE (a level of 0x20 once) is skipped: the tones keep their measured levels
+    f, k = kiss_frame(b'>plain')
+    start = len(cpu.bk.writes)
+    cpu.uart_in.extend(b'\xc0\x06\x01\x20\xc0' + k)
+    assert cpu.run(400_000_000, until=lambda: (0x70, 0) in cpu.bk.writes[start:]), 'never sent'
+    assert (0x70, 0x8000 | 0x60 << 8) in cpu.bk.writes[start:], 'tone 1 not at 0x60 after a SETHARDWARE'
+    bits = tnc_air_bits(cpu, start)
+    assert tnc_air_frames(cpu, start)[0] == [f], 'the frame after a SETHARDWARE'
+    flags = len(re.search(r'(?:01111110)*$', bits[:-1] if bits.endswith('1') else bits).group(0)) // 8
+    assert 3 <= flags <= 4, '%d closing flags without TXTAIL' % flags
+    cpu.run(8_000_000)
+    # TXTAIL 200 ms: 30 flags after the last frame; ACKMODE: 0C, the id back once the frame is out
+    f, k = kiss_frame(b'>acked')
+    start = len(cpu.bk.writes)
+    cpu.uart_out.clear()
+    cpu.uart_in.extend(b'\xc0\x04\x14\xc0' + b'\xc0\x0c\x12\xdb\xdc' + k[2:])   # id 12 C0 (escaped)
+    assert cpu.run(400_000_000, until=lambda: (0x70, 0) in cpu.bk.writes[start:]), 'never sent'
+    assert b'\xc0\x0c' not in cpu.uart_out, 'acked before the frame went out'
+    assert tnc_air_frames(cpu, start)[0] == [f], 'the ACKMODE frame on the air'
+    bits = tnc_air_bits(cpu, start)
+    flags = len(re.search(r'(?:01111110)*$', bits[:-1] if bits.endswith('1') else bits).group(0)) // 8
+    assert flags >= 30, '%d closing flags with TXTAIL 200 ms' % flags
+    cpu.run(20_000_000)
+    assert b'\xc0\x0c\x12\xdb\xdc\xc0' in cpu.uart_out, 'no ack: %s' % cpu.uart_out.hex()
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_kiss_strict(cpu):             # TNC: SetHardware TXBUF: and TNC: answered; broken escapes and other ports dropped
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.uart_out.clear()
+    cpu.uart_in.extend(b'\xc0\x06TXBUF:\xc0')   # Dire Wolf's queries
+    cpu.run(20_000_000)
+    assert cpu.uart_out == b'\xc0\x06TXBUF:00000\xc0', 'empty queue: %r' % bytes(cpu.uart_out)
+    cpu.uart_out.clear()
+    cpu.uart_in.extend(b'\xc0\x06TNC:\xc0\xc0\x06OTHER\xc0')   # anything else: no answer
+    cpu.run(20_000_000)
+    assert re.fullmatch(rb'\xc0\x06TNC:TD-H3 \d+\.\d+\.\d+\S*\xc0', bytes(cpu.uart_out)), 'TNC: %r' % bytes(cpu.uart_out)
+    cpu.bk.busy = lambda f: True           # a busy channel: the frames wait while asked about
+    good, k = kiss_frame(b'>kept')
+    bad = kiss_frame(b'>broken')[1][:-1] + b'\xdb\x41\xc0'   # FESC then neither TFEND nor TFESC
+    port1 = b'\xc0\x10' + kiss_frame(b'>port one')[1][2:]     # data for port 1
+    after, k2 = kiss_frame(b'>after')
+    start = len(cpu.bk.writes)
+    cpu.uart_in.extend(k + bad + port1 + k2)
+    cpu.run(30_000_000)
+    cpu.uart_out.clear()
+    cpu.uart_in.extend(b'\xc0\x06TXBUF:\xc0')
+    cpu.run(20_000_000)
+    assert cpu.uart_out == b'\xc0\x06TXBUF:%05d\xc0' % (len(good) + len(after)), 'two frames waiting: %r' % bytes(cpu.uart_out)
+    cpu.bk.busy = None                     # clear: they go
+    assert cpu.run(800_000_000, until=lambda: (0x70, 0) in cpu.bk.writes[start:]), 'never sent'
+    assert tnc_air_frames(cpu, start)[0] == [good, after], 'on the air %s' % [g[16:] for g in tnc_air_frames(cpu, start)[0]]
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_screen_fields(cpu):           # TNC: the send state and the queue line keep fixed places: nothing shifts
+    if not os.path.exists(FW_TNC):         # (the queue line was strung together, BUSY jumped as QUEUE came and went)
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    import lcdshot
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    cpu.run(4_000_000)
+    def ink(y0):                           # the text pixels (not the background) of the 8 rows from y0
+        fb = lcdshot.frame(cpu.lcd)
+        bg = fb[y0][0]
+        return [[p != bg for p in row] for row in fb[y0:y0 + 8]]
+    def cols(m, a, b):                     # character columns a..b (6 px each, from x 4)
+        return [row[4 + 6 * a:4 + 6 * (b + 1)] for row in m]
+    q0, t0 = ink(106), ink(92)
+    cpu.bk.busy = lambda f: True           # the channel busy: two frames wait
+    for i in range(2):
+        cpu.uart_in.extend(kiss_frame(b'>wait %d' % i)[1])
+    cpu.run(30_000_000)
+    q1, t1 = ink(106), ink(92)
+    assert cols(q1, 0, 4) == cols(q0, 0, 4), 'QUEUE moved'
+    assert cols(q1, 6, 6) != cols(q0, 6, 6), 'the queue count stayed 0'
+    assert cols(q1, 8, 11) == cols(q0, 8, 11), 'BUSY moved or changed shape'
+    assert cols(q1, 13, 16) == cols(q0, 13, 16), 'DROP moved'
+    for m in (q0, q1):
+        assert not any(any(c) for c in cols(m, 7, 7) + cols(m, 12, 12)), 'text between the fields'
+    assert cols(t1, 0, 1) == cols(t0, 0, 1), 'the TX label moved'
+    assert cols(t1, 3, 9) != cols(t0, 3, 9), 'the TX state word didn\'t change (IDLE -> WAIT)'
+    cpu.bk.busy = None
+    cpu.run(400_000_000, until=lambda: (0x70, 0) in cpu.bk.writes)   # sent
+    cpu.run(10_000_000)
+    assert ink(92) == t0, 'not IDLE again after sending'
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_tune_keys(cpu):               # TNC: digits and UP/DOWN tune as on the home screen; the TNC's receiver after; # the speaker
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '144800')
+    start = len(cpu.bk.writes)
+    keys(cpu, list('1455'))
+    press(cpu, 'EXIT')                     # V/M while typing: takes the 5 back, the TNC stays
+    assert tnc_running(cpu), 'V/M while typing left the TNC'
+    keys(cpu, list('500'))                 # 145.500 (the sixth digit tunes)
+    cpu.run(2_000_000)
+    assert 14550000 in tuned(cpu, start), 'not tuned to 145.500: %s' % tuned(cpu, start)[-3:]
+    regs = cpu.bk.regs
+    assert regs.get(0x48) == 0xB3FF and regs.get(0x2B) == 0x0100 and regs.get(0x43) == 0x4848, \
+        'the TNC\'s receiver not back: 48 %04X 2B %04X 43 %04X' % (regs.get(0x48), regs.get(0x2B), regs.get(0x43))
+    start = len(cpu.bk.writes)
+    press(cpu, 'UP')
+    cpu.run(2_000_000)
+    up = [f for f in tuned(cpu, start) if f != 14550000]
+    assert up and up[-1] > 14550000, 'UP: %s' % tuned(cpu, start)
+    assert regs.get(0x48) == 0xB3FF, 'UP: the TNC\'s receiver not back'
+    assert not amp(cpu)
+    press(cpu, '#')
+    assert amp(cpu), '#: no speaker'
+    press(cpu, '#')
+    assert not amp(cpu), '# again: still on'
+    press(cpu, 'EXIT'); cpu.run(2_000_000)
+    assert not tnc_running(cpu), 'V/M did not leave'
+
+
+def test_tnc_busy(cpu):                    # TNC: waits while the channel is in use: a carrier as SQUELCH says, or a packet (DCD)
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afskmodel
+    TX_ON = (0x30, 0xC1FE)
+    def queue(cpu, text):                  # a frame from the host; the bk.writes index from which to look for TX
+        start = len(cpu.bk.writes)
+        cpu.uart_in.extend(kiss_frame(text)[1])
+        return start
+    def keys_up(cpu, start, n):            # did it key up within n instructions (~800K a second)
+        return cpu.run(n, until=lambda: TX_ON in cpu.bk.writes[start:]) and TX_ON in cpu.bk.writes[start:]
+    def opened(sql_keys):                  # SQUELCH set from 3 (the default), then the TNC on 144.800
+        cpu = boot(FW_TNC)
+        menu(cpu, 'SQUELCH', sql_keys + ['EXIT'])
+        tnc_open(cpu, '144800')
+        return cpu
+    # SQUELCH 3: the chip's squelch
+    cpu = opened([])
+    cpu.bk.busy = lambda f: True
+    start = queue(cpu, b'>busy: squelch')
+    assert not keys_up(cpu, start, 3_000_000), 'SQUELCH 3: sent while the squelch was open'
+    cpu.bk.busy = None
+    assert keys_up(cpu, start, 400_000_000), 'SQUELCH 3: never sent once the squelch closed'
+    keys(cpu, ['EXIT'])
+    # SQUELCH 0: a carrier 12 dB and more over the noise floor the TNC tracks
+    cpu = opened(['DOWN'] * 3)
+    cpu.bk.dbm = lambda f: -125
+    cpu.run(2_000_000)                     # the floor walks down from -110 to the band's -125
+    cpu.bk.dbm = lambda f: -100
+    start = queue(cpu, b'>busy: floor')
+    assert not keys_up(cpu, start, 3_000_000), 'SQUELCH 0: sent over a carrier 25 dB over the floor'
+    cpu.bk.dbm = lambda f: -122            # hiss, a little over the floor: clear
+    assert keys_up(cpu, start, 400_000_000), 'SQUELCH 0: never sent once the carrier went'
+    cpu.bk.dbm = lambda f: -150            # a band quieter than -128 dBm: the floor follows it down
+    cpu.run(4_000_000)
+    cpu.bk.dbm = lambda f: -125            # 25 dB over that floor
+    start = queue(cpu, b'>busy: low floor')
+    assert not keys_up(cpu, start, 3_000_000), 'SQUELCH 0: floor under -128 dBm: sent over a carrier 25 dB over it'
+    keys(cpu, ['EXIT'])
+    # SQUELCH 0: a packet coming in, no carrier the RSSI can tell: DCD holds the frame back till it's over
+    cpu = opened(['DOWN'] * 3)
+    n = afskmodel.synth()
+    cpu.p46, cpu.p46_isr = n, 0
+    # DCD once the tones have begun (~480 samples of silence first): the emulator's P4.6 without a capture
+    # follows the servo's own pulses, which can light it for a moment before
+    assert cpu.run(len(n) * 1500, until=lambda: cpu.p46_isr > 500 and leds(cpu)[0]), 'no DCD on the packet'
+    start = queue(cpu, b'>busy: dcd')
+    assert keys_up(cpu, start, 400_000_000), 'never sent after the packet'
+    assert kiss_frames(cpu.uart_out), 'keyed up before the packet coming in had ended'
+    cpu.p46 = None
+    keys(cpu, ['EXIT'])
+    # S9 (S-meter squelch): the chip's squelch open but the signal under S9 (-93 dBm): clear; over it: busy
+    cpu = opened(['UP'] * 15)
+    cpu.bk.busy = lambda f: True
+    cpu.bk.dbm = lambda f: -80
+    start = queue(cpu, b'>busy: S9')
+    assert not keys_up(cpu, start, 3_000_000), 'S9: sent over a signal above S9'
+    cpu.bk.dbm = lambda f: -100
+    assert keys_up(cpu, start, 400_000_000), 'S9: never sent with the signal under S9'
+    keys(cpu, ['EXIT'])
+
+
+def test_tnc_tx_refused(cpu):              # TNC: no TX outside TX BANDS (162.550, weather): never keys up
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    tnc_open(cpu, '162550')
+    start = len(cpu.bk.writes)
+    cpu.uart_in.extend(kiss_frame(b'>must not go out')[1])
+    cpu.run(30_000_000)
+    assert (0x30, 0xC1FE) not in cpu.bk.writes[start:] and (0x70, 0x8000 | 0x60 << 8) not in cpu.bk.writes[start:], 'keyed up'
+    assert cpu.sfr[0xC0] & 0x20 and cpu.sfr[0xC0] & 0x80, 'a TX path on'
+    keys(cpu, ['EXIT'])
+
+
 FIRST = [
     ('first block: boot, RX path, TX band plan, clone protocol', test_first_block),
     ('no factory cal -> no TX', test_no_cal_no_tx),
@@ -4378,6 +5056,28 @@ INDEPENDENT = [
     ('typed digits show on the RX-only build', test_entry_rxonly),
     ('V/M leaves a remotely started PC LINK', test_remote_pc_link_exit),
     ('menu walk: every setting, its text and saved bytes', test_menu_walk),
+    ('TNC build: P4.6 audio decoded to KISS, all put back on leaving', test_tnc_kiss),
+    ('menu: an item the build hasn\'t got (TNC) is skipped and refused, numbers kept', test_menu_hidden_items),
+    ('TNC build: item 31 and key 8 open the TNC; FM RADIO, WEATHER, WX ALERT hidden; no weather look', test_tnc_build_menu),
+    ('TNC build: a KISS frame from the host goes out on the air bit for bit', test_tnc_tx),
+    ('TNC build: a frame\'s FCS is computed with sampling off (crc_byte unshared)', test_tnc_tx_fcs_unshared),
+    ('TNC build: 4 frames from the host go out in order in one key-up, a 5th is dropped', test_tnc_tx_queue),
+    ('TNC build: a 316 B frame (AX.25\'s full length) reaches the host whole', test_tnc_long_frame_rx),
+    ('TNC build: ACKMODE acks after sending, TXTAIL\'s flags, SETHARDWARE ignored', test_tnc_kiss_commands),
+    ('TNC build: SetHardware TXBUF: and TNC: answered; broken escapes and port 1 dropped', test_tnc_kiss_strict),
+    ('TNC build: the send state and the queue line keep fixed places', test_tnc_screen_fields),
+    ('TNC build: digits and UP/DOWN tune as at home, # the speaker', test_tnc_tune_keys),
+    ('TNC build: no TX outside TX BANDS', test_tnc_tx_refused),
+    ('TNC build: waits for a clear channel: squelch, S-meter, noise floor, DCD', test_tnc_busy),
+    ('TNC build: two frames on one flag both reach the host', test_tnc_back_to_back),
+    ('TNC build: the AX.25 frame inside FX.25 (tag 2, an abort in it) reaches the host', test_tnc_fx25_plain),
+    ('TNC build: connected-mode frames (SABM, I, RR) reach the host', test_tnc_connected),
+    ('TNC build: KISS over Bluetooth (UART0) both ways with BLUETOOTH on', test_tnc_bluetooth),
+    ('TNC build: the speaker stays on across a send', test_tnc_speaker_after_tx),
+    ('TNC build: LIGHT\'s timeout, the first key only lights, a signal keeps it lit', test_tnc_backlight),
+    ('TNC build: hold * locks every key, side keys and flashlight too', test_tnc_key_lock),
+    ('TNC build: lights: left green incoming, right green decoded, right red lost', test_tnc_leds),
+    ('TNC build: dual watch paused in the TNC, back after', test_tnc_dual_watch),
 ]
 
 
@@ -4420,8 +5120,8 @@ def check_menu_help():                     # fw/help.c is tools/mkhelp.py's outp
     src = open(os.path.join(HERE, 'main.c')).read()
     names = re.findall(r'"([^"]+)"', src[src.index('mnames[M_N] = {'):].split('};')[0])
     assert len(mkhelp.HELP) == len(names), 'mkhelp.py has %d lines for %d menu items' % (len(mkhelp.HELP), len(names))
-    got = [int(w, 16) for w in re.findall(r'0x([0-9A-F]{4})', open(os.path.join(HERE, 'help.c')).read())]
-    assert got == mkhelp.pack(mkhelp.HELP), 'fw/help.c is stale: run python3 tools/mkhelp.py'
+    words = lambda t: [int(w, 16) for w in re.findall(r'0x([0-9A-F]{4})', t)]
+    assert words(open(os.path.join(HERE, 'help.c')).read()) == mkhelp.pack(mkhelp.HELP), 'fw/help.c is stale: run python3 tools/mkhelp.py'
 
 if __name__ == '__main__':
     import json

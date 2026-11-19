@@ -12,15 +12,15 @@
 | Flash the receive-only build | `tdh3 flash --rx` |
 | Update and flash the receive-only build | `tdh3 update --rx` |
 | Flash some other image | `tdh3 firmware flash FILE` |
-| See the version before flashing | Set **MENU**, **4** **7** (REMOTE) to ON and leave the radio on |
+| See the version before flashing | Set **MENU**, **4** **8** (REMOTE) to ON and leave the radio on |
 | The flasher keeps saying **plug the radio's USB-C cable into the computer** | Check the cable carries data; on a TD-H3 Plus it never finds one: this firmware is for the TD-H3 only |
 | Flash with two radios plugged in | The flasher lists them, numbered: type the number of the one to flash |
 | `no answer from flash mode` | Switch off, hold **PTT**, switch on again |
-| Check the version afterwards | **MENU**, **5** **2** (VERSION) |
-| Back up the radio first | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 eeprom backup my-radio-backup.bin` |
-| Reset every setting to its default | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 reset` ([below](#resetting-every-setting-to-its-default)) |
-| Restore a backup to the radio | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 restore my-radio-backup.bin` ([The tdh3 program](The-tdh3-Program#restoring-a-backup)) |
-| Restore settings from a backup | **MENU**, **4** **6** (PC LINK), **MENU**, then `tdh3 settings restore my-radio-backup.bin` ([below](#saving-and-restoring-your-settings)) |
+| Check the version afterwards | **MENU**, **5** **3** (VERSION) |
+| Back up the radio first | **MENU**, **4** **7** (PC LINK), **MENU**, then `tdh3 eeprom backup my-radio-backup.bin` |
+| Reset every setting to its default | **MENU**, **4** **7** (PC LINK), **MENU**, then `tdh3 reset` ([below](#resetting-every-setting-to-its-default)) |
+| Restore a backup to the radio | **MENU**, **4** **7** (PC LINK), **MENU**, then `tdh3 restore my-radio-backup.bin` ([The tdh3 program](The-tdh3-Program#restoring-a-backup)) |
+| Restore settings from a backup | **MENU**, **4** **7** (PC LINK), **MENU**, then `tdh3 settings restore my-radio-backup.bin` ([below](#saving-and-restoring-your-settings)) |
 | Copy channels from another radio | [Channels and scanning](Channels-and-Scanning#copy-channels-from-another-radio): `tdh3 channels copy FILE` |
 | Get just the `.bin` files | `tdh3 firmware extract my-folder` saves both builds there |
 | Go back to TIDRADIO's firmware | `tdh3 firmware flash H3_250317.BIN` ([below](#going-back-to-tidradios-firmware)) |
@@ -74,7 +74,7 @@ and typing `tdh3 flash` do the same thing.
    **The first time**, while the radio still has TIDRADIO's firmware, it doesn't matter whether
    the radio is on: in step 3 you'll switch it off and on with **PTT** held.
 
-   **Once it has this firmware**, leave the radio on, with MENU → REMOTE (item 47) on: the flasher
+   **Once it has this firmware**, leave the radio on, with MENU → REMOTE (item 48) on: the flasher
    can then tell you which version it runs now, and you won't need to switch the radio off and on
    to flash it.
 
@@ -158,7 +158,7 @@ PTT and switch it on (the old way in step 3), and it carries on by itself:
 ```
 
 If the last line is amber instead of green, the flash went through but the radio didn't
-answer over the cable (REMOTE off): check MENU → VERSION (item 52) yourself.
+answer over the cable (REMOTE off): check MENU → VERSION (item 53) yourself.
 
 ![The VERSION item](img/version.png)
 
@@ -210,7 +210,7 @@ A and B on your first two channels. Your memory channels and FM radio presets st
 transmit calibration is never touched. Flashing doesn't do this: it keeps your settings.
 
 1. Switch the radio on and plug it into the computer with its USB-C cable.
-2. On the radio: press **MENU**, type **4** **6** (PC LINK), press **MENU**. The screen says
+2. On the radio: press **MENU**, type **4** **7** (PC LINK), press **MENU**. The screen says
    *waiting for computer*.
 
    ![PC LINK waiting for a computer](img/pclink.png)
@@ -239,7 +239,7 @@ in, and prints the file's name. To go back, restore that file
 A backup holds every menu setting, so you can try things and restore your own setup in one go,
 or copy your settings onto a second TD-H3.
 
-1. **Save them.** Radio in PC LINK (**MENU**, **4** **6**, **MENU**), then:
+1. **Save them.** Radio in PC LINK (**MENU**, **4** **7**, **MENU**), then:
    ```bash
    tdh3 eeprom backup my-radio-backup.bin
    ```
@@ -265,7 +265,7 @@ Download the TD-H3 firmware from TIDRADIO's firmware page,
 https://tidradio.com/pages/tidradio-firmware, and unzip it: it holds `H3_250317.BIN`. Put that file
 beside the flasher and open a terminal there.
 
-**Back up first** (**MENU**, **4** **6** (PC LINK), **MENU**, then):
+**Back up first** (**MENU**, **4** **7** (PC LINK), **MENU**, then):
 ```bash
 tdh3 eeprom backup my-radio-backup.bin
 ```

@@ -247,7 +247,7 @@ static void no_wait(void) { t_open = now() - 1000; }   // past the longest resum
 static uint8_t slot_ok(const __xdata slot_t *x) __reentrant { return x->vfo >= 1800000UL && x->vfo <= 99999999UL && x->chn <= 199 && x->mem < 2; }   // mem 2-255: V/M's ^= 1 never reached 0
 
 enum { M_SQL, M_ATT, M_COMP, M_NAR, M_BW, M_MODE, M_STEP, M_RXT, M_POW, M_SHIFT, M_OFFS, M_TXT, M_TXB, M_TOT, M_TAIL, M_MIC, M_VOX, M_VOXD, M_DTMF, M_CALL,   // the menu's order
-       M_GROUP, M_PAUSE, M_RESUME, M_DW, M_PRIO, M_GLINK, M_GRP, M_SCOPE, M_FF, M_FM, M_WXM, M_LH, M_NAME, M_TOVFO, M_DEL,
+       M_GROUP, M_PAUSE, M_RESUME, M_DW, M_PRIO, M_GLINK, M_GRP, M_SCOPE, M_FF, M_FM, M_TNC, M_WXM, M_LH, M_NAME, M_TOVFO, M_DEL,
        M_LIGHT, M_BRIGHT, M_THEME, M_DIGITS, M_BEEP, M_KLOCK, M_BELL, M_WX, M_APO, M_SAVE, M_PC, M_REM, M_BT, M_FCAL, M_MCAL, M_BCAL, M_VER, M_N };
 static const __code char *const __code theme_s[NTHEMES] = {"CLASSIC", "NIGHT AMBER", "GREEN", "NIGHT RED", "POCKET", "NIXIE", "E-INK", "FIELD", "HIGH-VIS"};
 enum { D_ARC, D_LCD, D_CLASSIC };          // DIGITS: 0, a new radio's, is ARCADE
@@ -1032,18 +1032,20 @@ static void draw_main(void)
 static const __code char *const __code mnames[M_N] = {
     "SQUELCH", "ATTENUATOR", "COMPANDER", "NARROW kHz", "BANDWIDTH", "MODE", "STEP kHz", "RX TONE", "POWER", "SHIFT", "OFFSET MHz", "TX TONE", "TX BANDS", "TX TIMEOUT", "TAIL TONE", "MIC GAIN", "VOX", "VOX DELAY", "DTMF CODES", "CALL ID",
     "SCAN GROUP", "SCAN PAUSE", "SCAN RESUME", "DUAL WATCH", "PRIORITY", "GROUP LINK", "CH GROUPS",
-    "SCOPE", "FREQ FIND", "FM RADIO", "WEATHER", "LAST HEARD", "CH NAME", "CH TO VFO", "DELETE CH",
+    "SCOPE", "FREQ FIND", "FM RADIO", "TNC", "WEATHER", "LAST HEARD", "CH NAME", "CH TO VFO", "DELETE CH",
     "LIGHT", "BRIGHTNESS", "THEME", "DIGITS", "KEY BEEP", "KEY LOCK", "BELL", "WX ALERT", "AUTO OFF", "BATT SAVE",
     "PC LINK", "REMOTE", "BLUETOOTH", "FREQ CAL", "METER CAL", "BATT CAL", "VERSION",
 };
 
-// Items a build hasn't got stay in the list's numbering (MENU 3 1 is WEATHER in every build), hidden:
+// Items a build hasn't got stay in the list's numbering (MENU 3 2 is WEATHER in every build), hidden:
 // the cursor steps over them and typing one's number is refused (fw.h, build switches).
 static uint8_t item_on(uint8_t i) __reentrant
 {
-    (void)i;                                // a build with every item never looks at it
 #ifdef NO_FM
     if (i == M_FM) return 0;
+#endif
+#ifndef TNC
+    if (i == M_TNC) return 0;
 #endif
 #ifdef NO_WX
     if (i == M_WXM || i == M_WX) return 0;
@@ -1253,6 +1255,13 @@ static void set_vfo(uint32_t f) __reentrant             // put f into the select
 static void retune(void);
 static void codes_screen(void);
 
+#ifdef TNC
+static void tnc_screen(void)                // MENU TNC, key 8 in this build
+{
+    tnc_mode();
+    retune();                               // radio_tune puts back what the TNC changed (AF gain, filters, mute)
+}
+#endif
 #ifndef NO_FM
 static void fm_screen(void)                 // MENU FM RADIO, key 8
 {
@@ -1621,6 +1630,9 @@ static void menu_change(int8_t d) __reentrant
 #ifndef NO_FM
     case M_FM: fm_screen(); break;
 #endif
+#ifdef TNC
+    case M_TNC: tnc_screen(); break;
+#endif
 #ifndef NO_WX
     case M_WXM: wx_mode(); break;
 #endif
@@ -1760,6 +1772,38 @@ static void entry_done(void) __reentrant
     retune();
 }
 
+#ifdef TNC
+// The TNC's carrier test follows SQUELCH: 0 for SQUELCH 0, 1 for 1-9 (the chip's squelch), else S1-S9's
+// level in bk_dbm's units (METER CAL taken off), as the home screen's S-meter squelch compares it.
+int16_t tnc_sql_dbm(void)
+{
+    if (cfg.sql < 10) return cfg.sql != 0;
+    return (int16_t)(cfg.sql * 6) - 201 - cfg.mcal;
+}
+
+// The TNC screen's keys for the selected slot, as on the home screen (tnc.c): digits type a frequency
+// (a channel number on a memory channel), the last digit or MENU tunes, V/M takes a digit back; UP/DOWN
+// step by STEP or to the next channel. 1: the slot was retuned (the TNC puts its receiver settings
+// back), 0: the typing changed or the key wasn't one of these.
+uint8_t tnc_tune_key(uint8_t k) __reentrant
+{
+    if (DIGIT(k)) {
+        entry_key(k);
+        if (entry_n < (sl_mem() ? 3 : 6)) return 0;
+    } else if (entry_n) {
+        if (k == K_EXIT) { entry_key(k); return 0; }
+        if (k != K_MENU) return 0;
+    } else if (k == K_UP || k == K_DOWN) {
+        step_freq(DIR(k));
+        save_soon();
+        return 1;
+    } else return 0;
+    entry_done();
+    save_soon();
+    return 1;
+}
+#endif
+
 static void save_done(uint8_t ok) __reentrant           // write the tuned slot into the suggested or typed channel
 {
     uint32_t v = entry_n ? entry_value() : saving;
@@ -1829,7 +1873,11 @@ static void on_long(uint8_t k) __reentrant
 #ifndef NO_FFIND
     case K_7: scan_stop(); menu = M_FF; menu_change(1); break;
 #endif
+#ifdef TNC
+    case K_8: scan_stop(); menu = M_TNC; menu_change(1); break;       // the TNC build: no FM radio, the TNC
+#else
     case K_8: scan_stop(); menu = M_FM; menu_change(1); break;
+#endif
     case K_9: cfg.dw ^= 1; dirty = 1; save_soon(); break;
     case K_0: if (!sl_mem()) { cfg.narrow ^= 1; retune(); } break;
 #ifndef NO_WX
@@ -2179,6 +2227,9 @@ static void torch_run(void) __reentrant
     static const __code uint8_t lv[4] = {1, 15, 60, 200};       // moonlight, low, medium, high
     uint16_t t = now(), d = t - t_side;
     uint8_t held = key_held == K_SIDE2, was = torch, lvl = tlevel, duty;
+#ifdef TNC
+    if (tnc_run && locked) held = 0;        // the TNC's KEY LOCK takes the side keys too (tnc.c)
+#endif
     if (held != (side & SIDE_HELD)) {       // the key went down or up
         if (held) { side = SIDE_HELD | (torch ? 0 : SIDE_OFF); tsteps = 0; }
         else { if (!(side & SIDE_LONG)) taps++; side = 0; }

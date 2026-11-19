@@ -19,6 +19,9 @@ void t0_isr(void) __interrupt(1)
 
 void t1_isr(void) __interrupt(3)
 {
+#ifdef TNC
+    if (tnc_run) { tnc_isr(); return; }     // Timer1 samples P4.6 for the TNC instead (tnc.c): no beeps then
+#endif
     TH1 = beep_th; TL1 = beep_tl;
     BEEP = !BEEP;
 }
@@ -75,6 +78,9 @@ void torch_pwm(uint8_t duty) __reentrant { pwm_duty(0x20, duty); }
 
 void beep(uint16_t r, uint8_t n) __reentrant   // BEEP (fw.h) works out r and n when it compiles
 {
+#ifdef TNC
+    if (tnc_run) return;                    // P4.6 is the TNC's audio input, Timer1 its sample clock
+#endif
     beep_th = r >> 8; beep_tl = r;
     AMP_ON = 1;
     EA = 0; beep_left = n; EA = 1;
@@ -118,8 +124,6 @@ uint16_t batt_mv(void)
 #define BRT2DH  XREG(0xF5C6)
 #define P20CFG  XREG(0xF020)
 #define P21CFG  XREG(0xF021)
-__sfr __at(0x98) SCON0;
-__sfr __at(0x99) SBUF0;
 
 // UART1 runs on its interrupt (6, vector 0x0033, ES1: reference manual 19.5): each byte that lands
 // goes into rx1 at once, so a busy main loop (a mirrored redraw, 200 ms and more) no longer loses
@@ -134,10 +138,36 @@ void uart1_isr(void) __interrupt(6)
     if (SCON1 & 0x01) {                     // read SBUF before clearing RI, or a byte landing in between overwrites it
         uint8_t c = SBUF1;
         SCON1 &= ~0x01;
+#ifdef TNC
+        if (tnc_run) { if (!tnc_bt) tnc_rx(c); }   // the TNC parses KISS as it lands (tnc.c): no ring to overrun
+        else
+#endif
         if ((uint8_t)(rx1_in - rx1_out) < sizeof rx1) rx1[rx1_in++ & 15] = c;   // full: dropped
     }
-    if (SCON1 & 0x02) { SCON1 &= ~0x02; tx1_done = 1; }
+    if (SCON1 & 0x02) {
+        SCON1 &= ~0x02; tx1_done = 1;
+#ifdef TNC
+        if (tnc_run && !tnc_bt) kiss_next();   // the next KISS byte to the host (tnc.c)
+#endif
+    }
 }
+
+#ifdef TNC
+// UART0 (the Bluetooth module) on its interrupt only while the TNC has it (tnc.c sets ES0); PC LINK
+// polls it as before. The same priority as Timer1 and UART1: afsk.c's frame can't change meanwhile.
+void uart0_isr(void) __interrupt(4)
+{
+    if (SCON0 & 0x01) {
+        uint8_t c = SBUF0;
+        SCON0 &= ~0x01;
+        if (tnc_bt) tnc_rx(c);
+    }
+    if (SCON0 & 0x02) {
+        SCON0 &= ~0x02;
+        if (tnc_bt) kiss_next();
+    }
+}
+#endif
 
 void uart_init(void)
 {

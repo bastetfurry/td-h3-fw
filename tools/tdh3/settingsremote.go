@@ -114,7 +114,7 @@ func (s setting) planMenu(v string) (menuPlan, error) {
 	return pl, nil
 }
 
-// menuItem is the item number in the menu's title ("RECEIVE ----- 09/52"), 0 when there is none.
+// menuItem is the item number in the menu's title ("RECEIVE ----- 09/53"), 0 when there is none.
 func menuItem(sc *screen) int {
 	t, _ := sc.at(0, 0)
 	f := strings.Fields(t)

@@ -80,7 +80,7 @@ func (r *simMenu) draw() {
 		if r.entry != "" {
 			n = r.entry + "-"
 		}
-		r.text(0, 0, 1, "SETUP          "+n+"/52", 0x05, 0)
+		r.text(0, 0, 1, "SETUP          "+n+"/53", 0x05, 0)
 		var s setting
 		for _, x := range settingsTable {
 			if x.num == r.item {
@@ -130,7 +130,7 @@ func (r *simMenu) step(d int) {
 			continue
 		}
 		c, v := r.choices[r.item], r.vals[r.item]+d
-		if r.item >= 49 { // the CALs stop at their ends
+		if r.item >= 50 { // the CALs stop at their ends
 			r.vals[r.item] = min(max(v, 0), len(c)-1)
 		} else {
 			r.vals[r.item] = (v + len(c)) % len(c)
@@ -298,8 +298,8 @@ func TestSettingsSetOverRemote(t *testing.T) {
 	openClone = func(string) (clonePort, error) { t.Fatal("PC LINK opened"); return nil, nil }
 	t.Cleanup(func() { findRemote, openClone = old, oldC })
 	must(t, runSet("fake", "brightness", "10"))
-	if sim.value(37) != "10" {
-		t.Fatalf("BRIGHTNESS holds %s", sim.value(37))
+	if sim.value(38) != "10" {
+		t.Fatalf("BRIGHTNESS holds %s", sim.value(38))
 	}
 	must(t, runSet("fake", "MODE", "am")) // kept per slot: only the menu can set it
 	if sim.value(6) != "AM" {

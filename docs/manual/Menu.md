@@ -28,7 +28,8 @@ itself. Opening a tool (a `>` item) quiets the speaker until you're back in the 
 To go straight to an item, type its number from the table below: **1** then **2** opens item 12.
 Items 6-9 open as soon as you type the digit. For items 1-5, type the one digit and wait a second
 (or type **0** first: **0 5** is item 5), because 1-5 can also start a two-digit number. The first
-digit shows up top while the radio waits for the second. A number past 52 gives the "not possible" sound.
+digit shows up top while the radio waits for the second. A number past 53, or one of an item your firmware hasn't got (31 TNC in the normal firmware; 28, 29, 30, 32 and 44 in
+the TNC firmware), gives the "not possible" sound.
 
 Items 5-12 (BANDWIDTH to TX TONE) set up frequency mode. When the selected slot is on a memory channel
 their values show **VFO** in front (`VFO LOW`): changing them doesn't change the channel.
@@ -36,8 +37,8 @@ their values show **VFO** in front (`VFO LOW`): changing them doesn't change the
 ![The menu, on SQUELCH](img/menu.png)
 
 1. **The section** you're in: the list is in six (RECEIVE, TRANSMIT, SCAN, TOOLS, DISPLAY & SOUND, SETUP).
-2. **Where you are**: item 1 of 52.
-3. **A section's heading**, dim, with a dashed line. UP/DOWN step over it; item numbers count only items.
+2. **Where you are**: item 1 of 53.
+3. **A section's heading**, dim, with a dashed line. UP/DOWN step over it, and over items your firmware hasn't got; item numbers count only items, and stay the same in every firmware.
 4. **The selected item**, highlighted.
 5. **Its value.** MENU, then UP/DOWN changes it.
 6. **The items around it**, each with its current value at the right, so you can read your settings at a glance.
@@ -103,35 +104,36 @@ for the second one; here `2-` after pressing **2**.
 
 | # | Item | What it does |
 |---|---|---|
-| 28 | SCOPE | Same as long 3. See [Tools](Tools). |
-| 29 | FREQ FIND | Same as long 7. |
-| 30 | FM RADIO | Same as long 8. See [FM radio](FM-Radio). |
-| 31 | WEATHER | Same as long #: NOAA weather radio. See [Weather](Channels-and-Scanning#weather). |
-| 32 | LAST HEARD | The last 8 stations heard (`nothing heard yet` until then), newest first, with how long ago and the memory channel they were on. MENU opens it; UP/DOWN picks one, MENU tunes the selected slot to it, V/M goes back. Kept until you switch off. |
-| 33 | CH NAME | Name the selected slot's memory channel, up to 8 letters, typed on the keypad like an old phone. MENU opens it; **MENU** saves, **V/M** goes back without saving. Memory mode only. See [Naming a channel](Channels-and-Scanning#naming-a-channel). |
-| 34 | CH TO VFO | Copy the selected slot's memory channel into frequency mode, so you can tune around it with UP/DOWN without changing the channel. Its frequency, tones, shift, bandwidth and power become the frequency-mode settings. MENU does it. Memory mode only. See [Copying a channel to frequency mode](Channels-and-Scanning#copying-a-channel-to-frequency-mode). |
-| 35 | DELETE CH | Empty a memory channel (`NO CHANNELS LOADED` when there are none). MENU opens a list of your channels on the selected slot's; UP/DOWN picks one, MENU asks `DELETE 002 GMRS1?`, MENU again deletes it, V/M keeps it. See [Deleting a channel](Channels-and-Scanning#deleting-a-channel). |
+| 28 | SCOPE | Same as long 3. See [Tools](Tools). Not in the [TNC](TNC) firmware. |
+| 29 | FREQ FIND | Same as long 7. Not in the [TNC](TNC) firmware. |
+| 30 | FM RADIO | Same as long 8. See [FM radio](FM-Radio). Not in the [TNC](TNC) firmware. |
+| 31 | TNC | Only in the [TNC](TNC) firmware, where it's the same as long 8: the packet radio modem. The normal firmware skips this number. |
+| 32 | WEATHER | Same as long #: NOAA weather radio. See [Weather](Channels-and-Scanning#weather). Not in the [TNC](TNC) firmware. |
+| 33 | LAST HEARD | The last 8 stations heard (`nothing heard yet` until then), newest first, with how long ago and the memory channel they were on. MENU opens it; UP/DOWN picks one, MENU tunes the selected slot to it, V/M goes back. Kept until you switch off. |
+| 34 | CH NAME | Name the selected slot's memory channel, up to 8 letters, typed on the keypad like an old phone. MENU opens it; **MENU** saves, **V/M** goes back without saving. Memory mode only. See [Naming a channel](Channels-and-Scanning#naming-a-channel). |
+| 35 | CH TO VFO | Copy the selected slot's memory channel into frequency mode, so you can tune around it with UP/DOWN without changing the channel. Its frequency, tones, shift, bandwidth and power become the frequency-mode settings. MENU does it. Memory mode only. See [Copying a channel to frequency mode](Channels-and-Scanning#copying-a-channel-to-frequency-mode). |
+| 36 | DELETE CH | Empty a memory channel (`NO CHANNELS LOADED` when there are none). MENU opens a list of your channels on the selected slot's; UP/DOWN picks one, MENU asks `DELETE 002 GMRS1?`, MENU again deletes it, V/M keeps it. See [Deleting a channel](Channels-and-Scanning#deleting-a-channel). |
 
 ### Display & sound
 
 | # | Item | What it does |
 |---|---|---|
-| 36 | LIGHT | How long the backlight stays on after a key: 10 s, 30 s (default) or ON (always). It stays on while a signal comes in or you talk. On a dark screen, the first key only lights it (PTT always transmits). When the light goes out, the screen switches off too, to save battery; it comes back with the light, showing what changed meanwhile. How bright it is: BRIGHTNESS. |
-| 37 | BRIGHTNESS | How bright the screen's backlight is: 1 (dimmest) to 10 (brightest, the default); each step up looks about as big as the last. The screen changes as you pick, so you can see it. A lower level saves battery and is easier on your eyes at night. LIGHT still decides how long it stays on. |
-| 38 | THEME | The screen's colours: CLASSIC (default), NIGHT AMBER, GREEN, NIGHT RED (keeps your night vision), POCKET (dark green on pale green, like an old handheld game), NIXIE (warm orange on near-black, like glowing number tubes), E-INK (black on off-white, like an e-reader), FIELD (khaki on olive) or HIGH-VIS (black on bright yellow, easy to read in sunshine). The screen changes as you pick, so you can see it. This manual describes CLASSIC's colours (green while hearing, red while transmitting); every theme has its own shades for those. |
-| 39 | DIGITS | How the big frequency numbers look: ARCADE (default), chunky with a soft shadow; LCD, like a digital clock; or CLASSIC, the plain look from before. With ARCADE and LCD, `VFO` or the memory number moves to the top right of the slot, next to the name. The screen changes as soon as you leave the menu. A computer watching over REMOTE (`tdh3 remote screen`) shows the frequency in the CLASSIC look. |
-| 40 | KEY BEEP | ON (default) or OFF. A soft click on key presses, and the sound at power-on. The radio's other sounds (errors, alerts) play either way. |
-| 41 | KEY LOCK | What holding **\*** locks: KEYS (default), the keypad only, so PTT and side key 1 still transmit; or KEYS+PTT, the keypad and both transmit keys, for a radio in a pocket or bag. The flashlight works either way. The padlock in the status bar is red with KEYS+PTT. |
-| 42 | BELL | OFF (default) or ON. For when you leave the radio listening and step away: when someone talks after the radio has been quiet for 10 seconds or more (no key pressed, no talking, no signal), it plays a short ding-ding and puts a bell at the top of the screen, so you know someone called. The bell, and both status lights blinking amber, stay until you press any key. It doesn't ring while scanning or for a call caught by DUAL WATCH, PRIORITY or WX ALERT, and not with the squelch held open (squelch 0 or monitor). |
-| 43 | WX ALERT | NOAA channel to watch for the weather alert tone: checked every 5 s, also at squelch 0, with monitor on and from the FM radio. OFF (default) or 162.400-162.550. When the alert sounds, both status lights blink amber until you press a key. In weather mode (hold **#**) it listens for the alert tone all the time, and the alarm sounds once for each alert, so a key silences it even while the tone goes on. |
-| 44 | AUTO OFF | Put the radio to sleep after 30, 60 or 120 minutes with no key pressed, no signal heard and no scan running: the receiver, screen, backlight and flashlight go off. Any key wakes it (that key does nothing else). While it sleeps it hears nothing: no dual watch, priority or weather alert. The power switch is the volume knob, so this is the "off" a forgotten radio gets. OFF by default. |
-| 45 | BATT SAVE | While nothing is heard, the receiver naps between quick listens: OFF, SHORT, MIDDLE or LONG naps (0.12, 0.24, 0.48 s). Longer naps mean a longer battery but a slower catch: the first word of a call can be clipped. Starts at MIDDLE: about 5 days on a charge. |
+| 37 | LIGHT | How long the backlight stays on after a key: 10 s, 30 s (default) or ON (always). It stays on while a signal comes in or you talk. On a dark screen, the first key only lights it (PTT always transmits). When the light goes out, the screen switches off too, to save battery; it comes back with the light, showing what changed meanwhile. How bright it is: BRIGHTNESS. |
+| 38 | BRIGHTNESS | How bright the screen's backlight is: 1 (dimmest) to 10 (brightest, the default); each step up looks about as big as the last. The screen changes as you pick, so you can see it. A lower level saves battery and is easier on your eyes at night. LIGHT still decides how long it stays on. |
+| 39 | THEME | The screen's colours: CLASSIC (default), NIGHT AMBER, GREEN, NIGHT RED (keeps your night vision), POCKET (dark green on pale green, like an old handheld game), NIXIE (warm orange on near-black, like glowing number tubes), E-INK (black on off-white, like an e-reader), FIELD (khaki on olive) or HIGH-VIS (black on bright yellow, easy to read in sunshine). The screen changes as you pick, so you can see it. This manual describes CLASSIC's colours (green while hearing, red while transmitting); every theme has its own shades for those. |
+| 40 | DIGITS | How the big frequency numbers look: ARCADE (default), chunky with a soft shadow; LCD, like a digital clock; or CLASSIC, the plain look from before. With ARCADE and LCD, `VFO` or the memory number moves to the top right of the slot, next to the name. The screen changes as soon as you leave the menu. A computer watching over REMOTE (`tdh3 remote screen`) shows the frequency in the CLASSIC look. |
+| 41 | KEY BEEP | ON (default) or OFF. A soft click on key presses, and the sound at power-on. The radio's other sounds (errors, alerts) play either way. |
+| 42 | KEY LOCK | What holding **\*** locks: KEYS (default), the keypad only, so PTT and side key 1 still transmit; or KEYS+PTT, the keypad and both transmit keys, for a radio in a pocket or bag. The flashlight works either way. The padlock in the status bar is red with KEYS+PTT. |
+| 43 | BELL | OFF (default) or ON. For when you leave the radio listening and step away: when someone talks after the radio has been quiet for 10 seconds or more (no key pressed, no talking, no signal), it plays a short ding-ding and puts a bell at the top of the screen, so you know someone called. The bell, and both status lights blinking amber, stay until you press any key. It doesn't ring while scanning or for a call caught by DUAL WATCH, PRIORITY or WX ALERT, and not with the squelch held open (squelch 0 or monitor). |
+| 44 | WX ALERT | NOAA channel to watch for the weather alert tone: checked every 5 s, also at squelch 0, with monitor on and from the FM radio. OFF (default) or 162.400-162.550. When the alert sounds, both status lights blink amber until you press a key. In weather mode (hold **#**) it listens for the alert tone all the time, and the alarm sounds once for each alert, so a key silences it even while the tone goes on. Not in the [TNC](TNC) firmware. |
+| 45 | AUTO OFF | Put the radio to sleep after 30, 60 or 120 minutes with no key pressed, no signal heard and no scan running: the receiver, screen, backlight and flashlight go off. Any key wakes it (that key does nothing else). While it sleeps it hears nothing: no dual watch, priority or weather alert. The power switch is the volume knob, so this is the "off" a forgotten radio gets. OFF by default. |
+| 46 | BATT SAVE | While nothing is heard, the receiver naps between quick listens: OFF, SHORT, MIDDLE or LONG naps (0.12, 0.24, 0.48 s). Longer naps mean a longer battery but a slower catch: the first word of a call can be clipped. Starts at MIDDLE: about 5 days on a charge. |
 
-THEME (item 38), row by row: CLASSIC, NIGHT AMBER, GREEN; NIGHT RED, POCKET, NIXIE; E-INK, FIELD, HIGH-VIS.
+THEME (item 39), row by row: CLASSIC, NIGHT AMBER, GREEN; NIGHT RED, POCKET, NIXIE; E-INK, FIELD, HIGH-VIS.
 
 ![The nine themes](img/themes.png)
 
-DIGITS (item 39), left to right: ARCADE, LCD, CLASSIC.
+DIGITS (item 40), left to right: ARCADE, LCD, CLASSIC.
 
 ![The three DIGITS looks](img/digits.png)
 
@@ -139,12 +141,12 @@ DIGITS (item 39), left to right: ARCADE, LCD, CLASSIC.
 
 | # | Item | What it does |
 |---|---|---|
-| 46 | PC LINK | Hand the radio to a computer (CHIRP, `tdh3`), over the USB-C cable, or over Bluetooth too when BLUETOOTH is on. The screen says *waiting for computer*; **V/M** leaves. The backlight goes out after the LIGHT time (any key lights it again), and after 10 minutes with nothing from the computer the radio goes back to listening by itself. See [Channels and scanning](Channels-and-Scanning#loading-your-channel-list), and [Updating](Updating#saving-and-restoring-your-settings) for backing up and restoring settings. |
-| 47 | REMOTE | Let a computer see the screen and press keys (never transmit), or wait for something to happen: `tdh3 remote wait "squelch open"` returns when someone talks on the frequency. Off by default. |
-| 48 | BLUETOOTH | OFF (default) or ON: the Bluetooth module, for programming from a phone. The Bluetooth sign shows in the status bar while it's on. |
-| 49 | FREQ CAL | Fine frequency correction, -10.0 to +10.0 ppm in 0.1 steps. Leave at +0.0 unless you've measured an error. |
-| 50 | METER CAL | Signal meter correction, -40 to +40 dB (default +0). |
-| 51 | BATT CAL | Battery voltage correction, -1.00 to +1.00 V in 0.02 V steps (default +0.00). |
-| 52 | VERSION | Firmware version, for example `0.55.2`. Nothing to change. |
+| 47 | PC LINK | Hand the radio to a computer (CHIRP, `tdh3`), over the USB-C cable, or over Bluetooth too when BLUETOOTH is on. The screen says *waiting for computer*; **V/M** leaves. The backlight goes out after the LIGHT time (any key lights it again), and after 10 minutes with nothing from the computer the radio goes back to listening by itself. See [Channels and scanning](Channels-and-Scanning#loading-your-channel-list), and [Updating](Updating#saving-and-restoring-your-settings) for backing up and restoring settings. |
+| 48 | REMOTE | Let a computer see the screen and press keys (never transmit), or wait for something to happen: `tdh3 remote wait "squelch open"` returns when someone talks on the frequency. Off by default. |
+| 49 | BLUETOOTH | OFF (default) or ON: the Bluetooth module, for programming from a phone. The Bluetooth sign shows in the status bar while it's on. |
+| 50 | FREQ CAL | Fine frequency correction, -10.0 to +10.0 ppm in 0.1 steps. Leave at +0.0 unless you've measured an error. |
+| 51 | METER CAL | Signal meter correction, -40 to +40 dB (default +0). |
+| 52 | BATT CAL | Battery voltage correction, -1.00 to +1.00 V in 0.02 V steps (default +0.00). |
+| 53 | VERSION | Firmware version, for example `0.55.2`. Nothing to change. |
 
 ![The VERSION item](img/version.png)

@@ -195,7 +195,7 @@ func TestTuneReadsKeysFromTheStream(t *testing.T) {
 func TestLitOnALightTheme(t *testing.T) {
 	var s []byte
 	s = append(s, 't', 0, 0, 1, 0x00, 0x00, 0xE7, 0x3C) // the title
-	s = append(s, "DISPLAY & SOUND 38/52\x00"...)
+	s = append(s, "DISPLAY & SOUND 39/53\x00"...)
 	s = append(s, 't', 0, 45, 1, 0x00, 0x00, 0xE7, 0x3C) // a row
 	s = append(s, "LIGHT\x00"...)
 	s = append(s, 't', 0, 60, 1, 0xE7, 0x3C, 0x00, 0x00) // the cursor

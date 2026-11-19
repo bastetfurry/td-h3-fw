@@ -3,12 +3,14 @@
 #define FW_H
 
 // Build switches (fw/Makefile sets them per image; none set is the full radio):
-//   NO_TX       receive only: radio_tx refuses, nothing can key up (make rxonly, xprobe)
-//   NO_FM       no FM broadcast radio (fm.c keeps fm_off for boot): MENU FM RADIO hidden, ~5 KB
+//   NO_TX       receive only: radio_tx refuses, nothing can key up (make rxonly, tnc-rx, xprobe)
+//   TNC         the APRS/KISS TNC (tnc.c, afsk.c), MENU item TNC and key 8 (make tnc, tnc-rx)
+//   NO_FM       no FM broadcast radio (fm.c keeps fm_off for boot): MENU FM RADIO hidden. The TNC
+//               build sets it: fm.c's ~5 KB don't fit beside the TNC
 //   NO_WX       no NOAA weather: weather mode (long #, MENU WEATHER) and WX ALERT hidden and compiled
-//               out; cfg.wx stays in the settings block, ignored
-//   NO_SCOPE    no band scope (MENU SCOPE, long 3): ~1.1 KB
-//   NO_FFIND    no FREQ FIND (MENU FREQ FIND, long 7, the BK4819's counter): ~0.8 KB
+//               out; cfg.wx stays in the settings block, ignored. The TNC build sets it
+//   NO_SCOPE    no band scope (MENU SCOPE, long 3): ~1.1 KB. The TNC build sets it
+//   NO_FFIND    no FREQ FIND (MENU FREQ FIND, long 7, the BK4819's counter): ~0.8 KB. The TNC build sets it
 //   XRAM_PROBE  the splash shows how far XRAM goes (make xprobe)
 
 #include <stdint.h>
@@ -19,6 +21,10 @@
 void t0_isr(void) __interrupt(1);
 void t1_isr(void) __interrupt(3);
 void uart1_isr(void) __interrupt(6);
+#ifdef TNC
+void t2_isr(void) __interrupt(5) __naked;   // tnc.c: the TNC's reads of P4.6, at high priority
+void uart0_isr(void) __interrupt(4);        // sys.c: KISS over Bluetooth while the TNC runs
+#endif
 extern volatile uint16_t ticks;            // 5 ms
 void sys_init(void);
 uint16_t now(void);                        // ticks, read safely
@@ -256,6 +262,20 @@ __xdata char *cat(__xdata char *d, const __code char *s) __reentrant;   // main.
 void clone_session(uint8_t bt) __reentrant;            // PC LINK, returns on EXIT or 10 quiet minutes; bt: also listen on Bluetooth
 
 // fm.c
+#ifdef TNC
+// tnc.c (make tnc): MENU 31 TNC (long 8), APRS and packet on P4.6, KISS over USB-C or Bluetooth
+extern volatile __bit tnc_run;              // sampling: Timer1 is the TNC's (t1_isr), beep() and REMOTE wait
+extern __bit tnc_bt;                        // the KISS port is Bluetooth (UART0, 9600), not USB-C
+void tnc_isr(void);                         // from t1_isr: each sample's demodulation (t2_isr sets TF1)
+void tnc_rx(uint8_t c);                     // from uart1_isr: the host's KISS, a byte at a time
+void kiss_next(void);                       // from uart1_isr, a byte out: the next KISS byte to the host
+void tnc_mode(void);                        // the TNC screen, till EXIT; the caller retunes afterwards
+int16_t tnc_sql_dbm(void);                 // main.c: SQUELCH for the TNC's carrier test: 0, 1 (1-9) or S1-S9's dBm
+uint8_t tnc_tune_key(uint8_t k) __reentrant;   // main.c: digits, MENU, V/M, UP/DOWN tune the slot as at home; 1: retuned
+extern __xdata char entry[8];               // main.c: the digits typed so far
+extern __data uint8_t entry_n;
+uint8_t sl_mem(void);                       // main.c: the selected slot is on a memory channel
+#endif
 void fm_off(void);                         // RDA5807 powered down (REG02 = 0000)
 uint8_t fm_mode(__xdata uint16_t *khz100, uint8_t wx);    // FM broadcast screen, returns on EXIT or PTT, or 1 for
                                            // a weather alert heard on channel wx (1-7, 0 = off)

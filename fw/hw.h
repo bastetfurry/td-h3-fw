@@ -17,6 +17,8 @@ __sfr __at(0x8C) TH0;
 __sfr __at(0x8D) TH1;
 __sfr __at(0x8E) CKCON;
 __sfr __at(0x90) P1;
+__sfr __at(0x98) SCON0;                     // UART0: the Bluetooth module, 9600
+__sfr __at(0x99) SBUF0;
 __sfr __at(0x91) FUNCCR;
 __sfr __at(0x96) TA;
 __sfr __at(0x97) WDCON;
@@ -29,7 +31,15 @@ __sfr __at(0xA4) P4TRIS;
 __sfr __at(0xA5) P5TRIS;
 __sfr __at(0xA8) IE;
 __sfr __at(0xB0) P3;
+__sfr __at(0xB8) IP;                        // interrupt priority: 1 = high (Timer2, bit 5: the TNC's reads)
 __sfr __at(0xC0) P4;
+__sfr __at(0xC8) T2CON;                     // Timer2 (manual 10.2): 0x11 = Fsys/12, reload at overflow
+__sfr __at(0xC9) T2IF;                      // bit 7 TF2, cleared by software
+__sfr __at(0xCA) RLDL;                      // the reload, low and high
+__sfr __at(0xCB) RLDH;
+__sfr __at(0xCC) TL2;
+__sfr __at(0xCD) TH2;
+__sfr __at(0xCF) T2IE;                      // bit 7 T2OVIE: the overflow's interrupt
 __sfr __at(0xD8) P5;
 __sfr __at(0xDC) ADRESL;
 __sfr __at(0xDD) ADRESH;
