@@ -452,6 +452,13 @@ twin of a function that changes every week is stale almost at once, so it saves 
 Good next ones once a function has gone a few releases unchanged: `git log -L` on it says when.
 Like the ones done, pick leaf-ish drawing and arithmetic before state machines, and keep the 15% rule.
 
+**`afsk_sample`** (`fw/asm/afsk_sample.asm`, the AFSK receive demodulator in `fw/afsk.c`) is the one
+asm written for time, not size: it runs 9592 times a second. `tools/asmcheck.py` links an asm only
+when its C file is in the firmware's `SRC`, so it waits until afsk.c is. asmdiff doesn't cover it;
+`tools/afskbench.py --lockstep N synth` proves it: C and asm images side by side in the emulator, the
+demodulator's whole state compared after every sample, on a synthesized frame (or a recording through
+`tools/afsksim.py -o`) and random input (two planted mutations were each caught within 3 samples).
+
 **Rules.** Never touch SFRs 0xFB-0xFF, no initialized XDATA, images under 0xF800. The asm may use less
 stack than its C, never more: asmdiff prints both depths and `make test ASM=1` the peak against the
 budget's reserve. Settings stay byte-compatible: the asm reads `cfg` through `asm.inc`'s offsets.

@@ -158,8 +158,9 @@ With thanks to the people whose work this firmware stands on:
 - **DualTachyon** (uv-k5-firmware), **Armel / F4HWN** (uv-k5-firmware-custom, and with muzkr the
   UV-K1 / UV-K5 V3 port), **OneOfEleven** (am_fix.c) and **fagci** (spectrum.c): how the BK4819 is
   driven, from tone scan, the frequency counter and the tone generator to squelch, AGC, SSB receive
-  and the scope's RSSI read. A few register set-ups, gain tables and that RSSI read are adapted from
-  their Apache-2.0 code: [NOTICE](NOTICE) lists each one, and `fw/bk4819.c` carries their notices.
+  and the scope's RSSI read; F4HWN's APRS RX for the TNC's AFSK demodulator. A few register set-ups,
+  gain tables, that RSSI read and the demodulator's chain are adapted from their Apache-2.0 code:
+  [NOTICE](NOTICE) lists each one, and the files holding them carry their notices.
 - The Beken BK4819 datasheet, and TIA-603 for the DCS encoder.
 
 ## Licence

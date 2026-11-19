@@ -1,7 +1,8 @@
 """The hand-written assembly's guard and its constants (docs/DEVELOPING.md, Assembly).
 
-    python3 tools/asmcheck.py link ASM CFUN     # the fw/asm modules to link (the Makefile asks)
-    python3 tools/asmcheck.py defs ASM CFUN     # -DC_<NAME> for every function built from C
+    python3 tools/asmcheck.py link ASM CFUN [SRC]   # the fw/asm modules to link (the Makefile asks)
+    python3 tools/asmcheck.py defs ASM CFUN [SRC]   # -DC_<NAME> for every function built from C
+(SRC: the build's C files, as the Makefile has them; afsk.c only in the TNC build. Default: SRC below.)
     python3 tools/asmcheck.py stale             # the asm functions whose C changed since the asm was written
     python3 tools/asmcheck.py inc               # fw/build/asm.inc: layout and constants, from the C
     python3 tools/asmcheck.py update <fn>       # after redoing <fn>'s asm: record its C's hash in the .asm
@@ -111,7 +112,8 @@ def linked(asm, cfun, quiet=False):
     if asm != '1':
         return []
     skip = set(cfun) | set(stale(quiet))
-    return [fn for fn in asm_files() if fn not in skip]
+    # only the asm of a file the firmware builds: fw/afsk.c's waits until the firmware links afsk.c
+    return [fn for fn in asm_files() if fn not in skip and header(fn)[0] in SRC + (None,)]
 
 
 def inc():
@@ -173,8 +175,11 @@ def update(fn):
 
 
 def main():
+    global SRC
     cmd, args = (sys.argv[1:2] or ['stale'])[0], sys.argv[2:]
     asm, cfun = (args + ['0', ''])[0], (args + ['0', ''])[1].split()
+    if cmd in ('link', 'defs') and len(args) > 2 and args[2].split():
+        SRC = tuple(args[2].split())
     if cmd == 'link':
         print(' '.join(linked(asm, cfun)))
     elif cmd == 'defs':

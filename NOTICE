@@ -35,6 +35,14 @@ Copyright 2023 fagci:
   - the scope's RSSI read (fw/bk4819.c, bk_dbm_at): wait for the glitch count to settle, then drop
     the first RSSI read, as GetRssi does.
 
+Armel / F4HWN, APRS RX in the UV-K1 / UV-K5 V3 port, App/apps/aprsrx/test/model_rx.py,
+https://github.com/armel/uv-k1-k5v3-firmware-custom, Copyright 2026 Armel F4HWN:
+  - the AFSK 1200 demodulator's chain (fw/afsk.c, fw/asm/afsk_sample.asm, tools/afskmodel.py): the
+    band-pass at 1625 Hz, the sliding I/Q correlators, the max + 3/8 min magnitude, the per-tone peak
+    AGC and the weighted slicers with their DPLLs; cut down for an 8051 and P4.6's 1-bit input.
+  - the TNC's tone set-up for sending (fw/tnc.c), as its APRS TX and DualTachyon's
+    BK4819_TransmitTone: register values.
+
 Egzumer (https://github.com/egzumer/uv-k5-firmware-custom): nothing taken; named because the UV-K1
 port's NOTICE carries them.
 
