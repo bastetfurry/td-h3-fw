@@ -8,7 +8,7 @@ SDCC := $(if $(SDCC_HOME),$(SDCC_HOME)/bin/,)sdcc
 MAKEBIN := $(if $(SDCC_HOME),$(SDCC_HOME)/bin/,)makebin
 
 # 0xF800: the bootloader owns 0xF800-0xFFFF and only erases below it.
-# 1280 B XRAM: stock firmware addresses XDATA up to 0x04E4, so at least that much exists.
+# 4 KB XRAM, 0x0000-0x0FFF: measured with make xprobe (docs/HARDWARE.md, MCU); stock used only up to 0x04E4.
 # Version: semver from the nearest vX.Y.Z tag. A release is a tag on main (make bump), so a
 # release build reads 0.5.0; a build past the tag reads 0.5.0-2 (2 commits on), + with
 # uncommitted changes in fw/. build/version changes only when the version does, forcing a rebuild.
@@ -22,7 +22,7 @@ $(shell mkdir -p build; echo '$(VER)' | cmp -s - build/version || echo '$(VER)' 
 # --disable-warning 110: SDCC's "conditional flow changed by optimizer" note (with its EVELYN joke), noise
 CFLAGS = -DVERSION='"$(VER)"' --Werror --disable-warning 110 -mmcs51 --model-large --opt-code-size --std-c11 \
          --noinvariant --fomit-frame-pointer --no-xinit-opt \
-         --code-size 0xF800 --xram-size 1280 --iram-size 256 $(DEFS) $(CDEFS)
+         --code-size 0xF800 --xram-size 4096 --iram-size 256 $(DEFS) $(CDEFS)
 SRC = main.c sys.c lcd.c eeprom.c bk4819.c keys.c radio.c clone.c fm.c scan.c remote.c glyphs.c tones.c help.c
 # Hand-written assembly (DEVELOPING.md, Assembly): fw/asm/<fn>.asm, each with its C original behind
 # #ifdef C_<FN>. ASM=1 (the default since v0.59.2) links the asm, but a
@@ -38,6 +38,9 @@ AS := $(if $(SDCC_HOME),$(SDCC_HOME)/bin/,)sdas8051
 all: build/td-h3.bin
 rxonly:
 	$(MAKE) DEFS=-DNO_TX OUT=td-h3-rx build/td-h3-rx.bin
+# make xprobe -> build/td-h3-xprobe-rx.bin: receive-only; the splash shows how far XRAM goes (main.c xram_probe)
+xprobe:
+	$(MAKE) DEFS="-DNO_TX -DXRAM_PROBE" OUT=td-h3-xprobe-rx build/td-h3-xprobe-rx.bin
 cref:
 	$(MAKE) ASM=0 OUT=td-h3-c build/td-h3-c.bin
 asm:
@@ -118,4 +121,4 @@ bump:
 clean:
 	rm -rf build
 
-.PHONY: all rxonly cref asm test budget screenshots demo wiki bump clean
+.PHONY: all rxonly xprobe cref asm test budget screenshots demo wiki bump clean

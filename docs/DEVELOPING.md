@@ -115,11 +115,11 @@ RAM spare". The full `make test` prints it after `all passed`; `make -C fw budge
 
 ```
 resource    used  limit   free reserve   price/B  verdict note
-flash      60815  63488   2673    2048   0.00160  tight   RX build 59909
-xdata       1015   1280    265      48   0.00461  plenty  RX build 1011
-stack        163    240     77      24   0.01887  plenty  peak 0xA3; DATA ends and the stack starts at 0x55
-settings      35     48     13       4   0.11111  plenty  +8 spare bits; the only EEPROM block we own
-pressure 9.317 (lower is better; a trade is worth it when it lowers this)
+flash      58694  63488   4794    2048   0.00036  watch   RX build 57765
+xdata        885   4096   3211      48   0.00032  plenty  RX build 885
+stack        132    240    108      24   0.01190  plenty  peak 0x84; DATA ends and the stack starts at 0x37
+settings      40     48      8       4   0.25000  watch   +7 spare bits; the only EEPROM block we own
+pressure 6.697 (lower is better; a trade is worth it when it lowers this)
 ```
 
 - **flash**: the image size against 0xF800. **xdata**: `EXTERNAL RAM` in `fw.mem`. Both are the
@@ -365,7 +365,12 @@ init values. Crop the rendered page to read a region by eye.
   and outside the modes radio.c's channel bitmaps and record. A new full-screen mode clears
   `maps_ok` as it starts, and must not load or save a channel.
 - **makebin** needs `-s 63488` or it complains the buffer is too small.
-- **`--xram-size 1280`**: stock uses XDATA up to 0x04E4, so at least that much exists.
+- **`--xram-size 4096`**: the XRAM measured with `make xprobe` (0x0000-0x0FFF, HARDWARE.md MCU);
+  stock only used up to 0x04E4, and this firmware used to declare 1280. The linker places
+  every XDATA variable, so `tools/budget.py` counts them all; nothing is placed by hand with `__at`.
+  Never raise it past what the probe found: a variable past the real RAM reads garbage, and the
+  emulator (flat 64 KB) can't tell. A probe must put another value on the bus before it reads an
+  address back: a first one didn't, and "found" 8 KB that the radio hasn't got.
 - **Watch 32-bit maths.** One extra `/` on a `uint32_t` costs ~200 bytes.
 
 ## Assembly

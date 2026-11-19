@@ -2,6 +2,10 @@
 #ifndef FW_H
 #define FW_H
 
+// Build switches (fw/Makefile sets them per image; none set is the full radio):
+//   NO_TX       receive only: radio_tx refuses, nothing can key up (make rxonly, xprobe)
+//   XRAM_PROBE  the splash shows how far XRAM goes (make xprobe)
+
 #include <stdint.h>
 #include "hw.h"
 

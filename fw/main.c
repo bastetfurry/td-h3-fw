@@ -2411,6 +2411,63 @@ static void splash(void) __reentrant
     draw_labels(l, 3);
 }
 
+#ifdef XRAM_PROBE
+// make xprobe: how far XRAM really goes. Every byte from 0x0400 (above this build's own XDATA) to
+// 0x7FFF, interrupts off, all put back: it takes 0x55, then 0xAA. After each write
+//  - A & 0x3FF, 0x7FF, 0xFFF, 0x1FFF and 0x3FFF must keep their bytes: a smaller RAM would mirror A there;
+//  - a known RAM byte (decoy) takes the opposite value, then A must still read what was written: an
+//    address with nothing behind it can read back the last value the bus carried (a probe that only
+//    read A straight back "found" 8 KB that isn't there).
+// The splash shows the last good address and why the next one failed.
+static __xdata uint8_t decoy;
+static const __code uint16_t xp_mask[5] = {0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF};
+static uint8_t xp_bad(uint16_t a) __reentrant   // 0: RAM; 'B': nothing there; 1-5: a mirror (xp_mask[n - 1])
+{
+    __xdata uint8_t *p = (__xdata uint8_t *)a;
+    uint8_t sm[5], s = *p, i, v, bad = 0;
+    for (i = 0; i < 5; i++) sm[i] = *(__xdata uint8_t *)(a & xp_mask[i]);
+    for (v = 0x55; ; v = 0xAA) {
+        *p = v;
+        for (i = 0; i < 5 && !bad; i++)
+            if ((a & xp_mask[i]) != a && *(__xdata uint8_t *)(a & xp_mask[i]) != sm[i]) bad = i + 1;
+        decoy = ~v;                         // the bus carries something else now
+        if (!bad && *p != v) bad = 'B';
+        for (i = 0; i < 5; i++) *(__xdata uint8_t *)(a & xp_mask[i]) = sm[i];
+        if (bad || v == 0xAA) break;
+    }
+    *p = s;
+    for (i = 0; i < 5; i++) *(__xdata uint8_t *)(a & xp_mask[i]) = sm[i];
+    return bad;
+}
+static __xdata char *xp_hex(__xdata char *t, uint16_t v) __reentrant
+{
+    static const __code char hx[] = "0123456789ABCDEF";
+    t[0] = hx[v >> 12]; t[1] = hx[v >> 8 & 15]; t[2] = hx[v >> 4 & 15]; t[3] = hx[v & 15]; t[4] = 0;
+    return t + 4;
+}
+static void xram_probe(void) __reentrant
+{
+    static __xdata char t[22];
+    __xdata char *q;
+    uint16_t a;
+    uint8_t bad = 0;
+    __bit ea = EA;
+    EA = 0;
+    for (a = 0x0400; a < 0x8000; a++) if ((bad = xp_bad(a))) break;
+    EA = ea;
+    q = xp_hex(cat(t, "XRAM 0000-"), a - 1);   // "XRAM 0000-0FFF"
+    lcd_text(4, 2, t, 1, P_FG);
+    if (!bad) cat(t, "none bad to 7FFF");
+    else {
+        q = xp_hex(t, a);                   // "1000 is 0000" (a mirror) / "1000 no RAM"
+        if (bad == 'B') cat(q, " no RAM");
+        else xp_hex(cat(q, " is "), a & xp_mask[bad - 1]);
+    }
+    lcd_text(4, 12, t, 1, P_FG);
+    delay_ms(10000);
+}
+#endif
+
 void main(void)
 {
     uint8_t k;
@@ -2427,6 +2484,9 @@ void main(void)
     lcd_init();                             // backlight stays off until there is a picture: no white flash
     backlight(bright_duty[cfg.bright]);    // lit for the boot animation: lcd_init left the panel the theme's background
     splash();
+#ifdef XRAM_PROBE
+    xram_probe();
+#endif
     bk_init();
     fm_off();
     radio_init();

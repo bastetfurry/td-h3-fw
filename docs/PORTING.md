@@ -24,7 +24,7 @@ their code, not even one function: a file that contains GPL code becomes GPL.
 
 ## What we copy, and what we don't
 
-Those firmwares mostly run on 32-bit MCUs with RAM to spare, under an RTOS. We have an 8051 with 1280 bytes of
+Those firmwares mostly run on 32-bit MCUs with RAM to spare, under an RTOS. We have an 8051 with 4 KB of
 XDATA, and images must stay under 0xF800 bytes. Under SDCC every function pointer and every extra
 layer of calls costs real bytes. So:
 
