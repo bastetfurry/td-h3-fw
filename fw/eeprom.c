@@ -51,10 +51,12 @@ static uint8_t addr(uint16_t a) __reentrant
     return tx(0xA0) && tx(a >> 8) && tx(a);
 }
 
+// Interrupts stay on: none touches P1, P5 or P5TRIS (they only stretch a clock phase, which I2C
+// allows), and a read with them off kept them off ~1 ms for radio_tx's 17 bytes at each key-up, so
+// the TNC lost KISS bytes from the host meanwhile (38400: one every 260 us).
 static uint8_t read_once(uint16_t a, __xdata uint8_t *buf, uint8_t n) __reentrant
 {
     uint8_t ok;
-    EA = 0;
     ok = addr(a);
     if (ok) {
         start();
@@ -62,7 +64,6 @@ static uint8_t read_once(uint16_t a, __xdata uint8_t *buf, uint8_t n) __reentran
         while (ok && n--) *buf++ = rx(n != 0);
     }
     stop();
-    EA = 1;
     return ok;
 }
 
