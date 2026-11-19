@@ -228,15 +228,24 @@ class I2CSniffer:
 
 PARITY = bytes(bin(i).count('1') & 1 for i in range(256))
 # SFRs whose write does more than store the byte: run() sends those through wr(). TCON, SCON0, IE,
-# 0xAA (the ADC interrupt's enable) and SCON1 are here as they decide when an interrupt or a received
-# byte is next due (_events).
+# 0xAA (the ADC interrupt's enable), IP, Timer2's T2CON, T2IF and T2IE, and SCON1 are here as they
+# decide when an interrupt or a received byte is next due (_events).
+T2_PERIOD = 200     # instructions between Timer2 overflows (its reload isn't modelled): the TNC's P4.6 reads
 HOOKED = bytearray(256)
-for _a in (0x81, 0x87, 0x88, 0x90, 0x96, 0x97, 0x98, 0x99, 0xA1, 0xA3, 0xA5, 0xA8, 0xAA, 0xB0, 0xD8, 0xDF, 0xEA,
-           0xEB, 0xEE, *FLASH_SFRS):
+for _a in (0x81, 0x87, 0x88, 0x90, 0x96, 0x97, 0x98, 0x99, 0xA1, 0xA3, 0xA5, 0xA8, 0xAA, 0xB0, 0xB8, 0xC8, 0xC9,
+           0xCF, 0xD8, 0xDF, 0xEA, 0xEB, 0xEE, *FLASH_SFRS):
     HOOKED[_a] = 1
 
 
 class CPU:
+    @property
+    def p46_isr(self):                     # the samples of p46 begun: Timer2's reads, 8 a sample
+        return (self.p46_t2 + 7) >> 3
+
+    @p46_isr.setter
+    def p46_isr(self, v):                  # cpu.p46, cpu.p46_isr = n, 0: n from its first sample
+        self.p46_t2 = v * 8
+
     def __init__(self, code, eeprom=None):
         self.code = bytearray(code) + bytearray(65536 - len(code))
         self.iram = bytearray(256)
@@ -264,9 +273,17 @@ class CPU:
         self.uart_garbled = 0     # bytes dropped for that
         self.uart_tx_due = 0      # icount when SBUF1's byte is out and TI sets
         self.idles = 0
+        # P4.6 as the TNC's audio input (fw/tnc.c): p46 is a list of n per sample (0-8, tools/afskmodel.py load);
+        # each Timer2 interrupt is one read, eight a sample, and the first n of a sample's eight see P4.6
+        # high. p46_isr (below): the samples begun; setting it 0 starts p46 from its first sample. Outside that
+        # interrupt (the bias walk before sampling) P4.6 reads high. None: P4.6 as any input pin.
+        self.p46, self.p46_t2 = None, 0
+        self.t2_due = 0                    # icount of Timer2's next overflow while it runs
+        self.t1_marks = []                 # len(bk.writes) at each Timer1 interrupt: the TNC's bit clock
 
     def restart(self):     # power-on or software reset; the loader isn't here, so it starts the app
         self.pc, self.in_isr, self.idle, self.ta_step = 0, [], False, 0   # idle: PCON IDLE till an interrupt
+        self.in_lvl = []       # each running handler's priority (IP): 1 interrupts 0, as on the chip
         self._ev = 0           # run(): the instruction count at which _events() must look again
         self.sfr[:] = bytes(256)
         self.sfr[0x81] = 7
@@ -296,6 +313,11 @@ class CPU:
                 v &= ~(~self.sfr[0x9A] & ~self.xram[0xF00A] & 0x0F)
             else:
                 v &= ~(~self.sfr[0xA2] & ~self.xram[0xF02A] & 0xC0)
+        elif port == 0xC0 and self.p46 is not None and self.in_isr and self.in_isr[-1] == 0x2B:
+            r = self.p46_t2 - 1
+            n = self.p46[r >> 3] if r >> 3 < len(self.p46) else 4   # past the capture: half ones, as the servo aims
+            if r & 7 >= n:
+                v &= ~0x40
         elif port == 0xD8:
             if not self.bk_sda:
                 v &= ~0x04
@@ -334,6 +356,8 @@ class CPU:
             self.sfr[0x87] &= ~3
             self.idle = True
             self.idles += 1
+        if a == 0xC8 and v & 3 == 1 and old & 3 != 1:   # Timer2 starts: its first overflow a period on
+            self.t2_due = self.icount + T2_PERIOD
         if a == 0x81 and v > self.sp_max:
             self.sp_max = v
         if a == 0x96:  # TA
@@ -478,10 +502,15 @@ class CPU:
         return v
 
     # ---- execution ----
-    def vector(self, v):
+    def vector(self, v, lvl=0):
+        if v == 0x1B:                      # Timer1: the TNC's demodulator, or its next bit (t1_marks)
+            self.t1_marks.append(len(self.bk.writes))
+        elif v == 0x2B:                    # Timer2: the TNC's next read of P4.6
+            self.p46_t2 += 1
         self.push(self.pc & 0xFF)
         self.push(self.pc >> 8)
         self.in_isr.append(v)
+        self.in_lvl.append(lvl)
         self.pc = v
 
     def uart_reload(self):                 # BRTDH:BRTDL counts up to 65536 at Fsys/16
@@ -543,25 +572,38 @@ class CPU:
             sfr[0x98] |= 1
             self.uart0_t = icount
         # ---- interrupts ----
+        if sfr[0xC8] & 3 == 1 and icount >= self.t2_due:   # Timer2 running at Fsys/12: TF2 (T2IF bit 7)
+            sfr[0xC9] |= 0x80
+            self.t2_due = icount + T2_PERIOD
         ie = sfr[0xA8]
-        if ie & 0x80 and (ie & 0x02 and sfr[0x88] & 0x20 or ie & 0x40 and sfr[0xEA] & 3 or ie & 0x08 and sfr[0x88] & 0x40
-                          or self.adc_pending and sfr[0xAA] & 0x10) and not self.in_isr:
-            v = 0
-            if sfr[0x88] & 0x20 and ie & 0x02:
-                sfr[0x88] &= ~0x20
-                v = 0x0B
-            elif ie & 0x40 and sfr[0xEA] & 3:
-                v = 0x33                   # UART1, RI1 or TI1 (the handler clears them)
-            elif self.adc_pending and sfr[0xAA] & 0x10:
-                self.adc_pending = False
-                v = 0x9B
-            elif ie & 0x08 and sfr[0x88] & 0x40:
+        if ie & 0x80:
+            # Two priority levels (IP): a pending source goes if its level is above the running handler's.
+            # Among those, the higher level first, then this order (Timer1's overflow, TF1, as the
+            # firmware sets it; its count while running, as before, only when nothing runs or waits).
+            ip = sfr[0xB8]
+            cur = self.in_lvl[-1] if self.in_lvl else -1
+            v, lv = 0, -1
+            for ok, l, vec in ((ie & 0x20 and sfr[0xCF] & 0x80 and sfr[0xC9] & 0x80, ip >> 5 & 1, 0x2B),
+                               (ie & 0x02 and sfr[0x88] & 0x20, ip >> 1 & 1, 0x0B),
+                               (ie & 0x40 and sfr[0xEA] & 3, ip >> 6 & 1, 0x33),
+                               (ie & 0x10 and sfr[0x98] & 3, ip >> 4 & 1, 0x23),   # UART0 (the TNC over Bluetooth)
+                               (self.adc_pending and sfr[0xAA] & 0x10, 0, 0x9B),
+                               (ie & 0x08 and sfr[0x88] & 0x80, ip >> 3 & 1, 0x1B)):
+                if ok and l > cur and l > lv:
+                    v, lv = vec, l
+            if not v and not self.in_isr and ie & 0x08 and sfr[0x88] & 0x40:
                 self.t1_count += 1
                 if self.t1_count % 500 == 0:
-                    v = 0x1B
+                    v, lv = 0x1B, ip >> 3 & 1
             if v:
+                if v == 0x0B:
+                    sfr[0x88] &= ~0x20
+                elif v == 0x1B:
+                    sfr[0x88] &= ~0x80     # TF1 clears as its handler starts (TF2 the handler clears)
+                elif v == 0x9B:
+                    self.adc_pending = False
                 self.pc = pc
-                self.vector(v)
+                self.vector(v, lv)
                 pc = v
         ie = sfr[0xA8]
         t1 = ie & 0x88 == 0x88 and sfr[0x88] & 0x40 and not self.in_isr   # Timer1 counts every instruction
@@ -573,6 +615,8 @@ class CPU:
                     nxt = min(self._due, skip + 1)
                     if self.uart_tx_due:
                         nxt = min(nxt, self.uart_tx_due)
+                    if sfr[0xC8] & 3 == 1:
+                        nxt = min(nxt, self.t2_due)
                     if self.uart_in:
                         nxt = min(nxt, self.uart_t + 2001)
                     if self.uart0_in and not sfr[0x98] & 1:
@@ -589,6 +633,8 @@ class CPU:
             ev = self._due
             if self.uart_tx_due:
                 ev = min(ev, self.uart_tx_due)
+            if sfr[0xC8] & 3 == 1:
+                ev = min(ev, self.t2_due)
             if self.uart_in:
                 ev = min(ev, self.uart_t + 2001)       # the next byte from the computer
             if self.uart0_in and not sfr[0x98] & 1:   # (with RI0 set, only a write to SCON0 changes that)
@@ -759,6 +805,7 @@ class CPU:
                 if hi == 3:
                     if self.in_isr:
                         self.in_isr.pop()
+                        self.in_lvl.pop()
                     self._ev = 0           # an interrupt held back by this one may go now
                 sp = sfr[0x81]
                 pc = iram[sp] << 8 | iram[(sp - 1) & 0xFF]
