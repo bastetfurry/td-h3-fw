@@ -141,10 +141,9 @@ and scanning pause, and AUTO OFF doesn't switch it off. They carry on when you l
   reaches it through `tools/ble_kiss.py`, which offers it as KISS on TCP port 8101 for direwolf's
   clients, Xastir or QtTermTCP. Bluetooth doesn't drop when the radio transmits, as the cable can.
   Phone apps need to support a plain BLE serial link (service FF00, write FF02, notify FF01);
-  APRSdroid's Bluetooth TNC support may not cover it. Packets heard reach the app whole up to
-  264 bytes (248 of text): longer ones come through cut short or not at all, as the module passes
-  data on slower than the radio hands it over. For connected mode, set the app's packet length
-  (PACLEN) to 200 or so.
+  APRSdroid's Bluetooth TNC support may not cover it. Packets heard reach the app whole at every
+  length, up to AX.25's 330 bytes: the module holds only about 264 bytes, so the radio pauses
+  5-10 ms after every 128 bytes it hands over, and the module passes on what it has meanwhile.
 - **The USB link can drop when the radio transmits.** Radio energy on the cable resets the USB
   chip; the app then loses the connection. A clip-on ferrite on the cable at the radio end (the
   cable looped through it 2 to 4 times), the antenna away from the cable, and a short cable help.

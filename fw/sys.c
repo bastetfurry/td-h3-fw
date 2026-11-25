@@ -11,6 +11,9 @@ void t0_isr(void) __interrupt(1)
 {
     TH0 = 0xB1; TL0 = 0xE0;
     ticks++;
+#ifdef TNC
+    if (bt_wait && !--bt_wait) kiss_next(); // the Bluetooth module's rest over (tnc.c): UART0 on, at the
+#endif                                      // same priority as uart0_isr, so no race
     if (beep_left && !--beep_left) {
         TCON &= ~0x40;                      // TR1 off
         BEEP = 0;
@@ -164,7 +167,7 @@ void uart0_isr(void) __interrupt(4)
     }
     if (SCON0 & 0x02) {
         SCON0 &= ~0x02;
-        if (tnc_bt) kiss_next();
+        if (tnc_bt) tnc_bt_ti();            // paced for the module (tnc.c)
     }
 }
 #endif

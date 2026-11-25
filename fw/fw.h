@@ -269,6 +269,8 @@ extern __bit tnc_bt;                        // the KISS port is Bluetooth (UART0
 void tnc_isr(void);                         // from t1_isr: each sample's demodulation (t2_isr sets TF1)
 void tnc_rx(uint8_t c);                     // from uart1_isr: the host's KISS, a byte at a time
 void kiss_next(void);                       // from uart1_isr, a byte out: the next KISS byte to the host
+void tnc_bt_ti(void);                       // from uart0_isr, a byte out: kiss_next, with a rest every 128 bytes
+extern volatile __data uint8_t bt_wait;     // t0_isr: ticks till the rest is over, then kiss_next
 void tnc_mode(void);                        // the TNC screen, till EXIT; the caller retunes afterwards
 int16_t tnc_sql_dbm(void);                 // main.c: SQUELCH for the TNC's carrier test: 0, 1 (1-9) or S1-S9's dBm
 uint8_t tnc_tune_key(uint8_t k) __reentrant;   // main.c: digits, MENU, V/M, UP/DOWN tune the slot as at home; 1: retuned

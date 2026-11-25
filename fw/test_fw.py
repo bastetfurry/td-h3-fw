@@ -4654,6 +4654,43 @@ def test_tnc_long_frame_rx(cpu):           # TNC: a frame of AX.25's full length
     keys(cpu, ['EXIT'])
 
 
+def test_tnc_bluetooth_paced(cpu):         # TNC over Bluetooth: a 316 B frame whole on UART0, resting 5-10 ms
+    if not os.path.exists(FW_TNC):         # after every 128 bytes (the module's ~264 B buffer overflowed)
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+    import afsksim
+    import emu51
+    f = kiss_frame((b'>long ' + bytes(range(65, 91)) * 12)[:300])[0]
+    n = afsksim.front_end(*afsksim.modulate([f]))
+    cpu = boot(FW_TNC)
+    keys(cpu, list('144800'))
+    cpu.run(1_000_000)
+    menu(cpu, 'BT', ['UP'])
+    cpu.uart_baud = 38400
+    menu(cpu, 'TNC', ['UP'])
+    cpu.uart0_out.clear()
+    cpu.p46, cpu.p46_isr = n, 0
+    at = []                                # the icount of each byte out
+    def until():
+        while len(at) < len(cpu.uart0_out):
+            at.append(cpu.icount)
+        return cpu.p46_isr > len(n) or len(kiss_frames(cpu.uart0_out)) == 1 and cpu.uart0_out[-1:] == b'\xc0'
+    cpu.run(len(n) * 3000, until=until)
+    got = kiss_frames(cpu.uart0_out)
+    assert got == [f], 'KISS on UART0 %s' % [len(g) for g in got]
+    gaps = [at[i] - at[i - 1] for i in range(1, len(at))]
+    rests = [i for i, g in enumerate(gaps, 1) if g >= emu51.TICK]
+    assert rests == list(range(128, len(at), 128)), 'rests before bytes %s of %d' % (rests, len(at))
+    assert all(emu51.TICK <= gaps[i - 1] <= 2 * emu51.TICK + 200 for i in rests), [gaps[i - 1] for i in rests]
+    cpu.p46 = None
+    keys(cpu, ['EXIT'])                    # LIGHT's timeout ran out: the first key lights the screen
+    cpu.run(1_000_000)
+    keys(cpu, ['EXIT'])
+    cpu.run(1_000_000)
+    assert not cpu.sfr[0xA8] & 0x10, 'ES0 off again: PC LINK polls UART0'
+
+
 def test_tnc_kiss_commands(cpu):           # TNC: ACKMODE's ack after the frame is out; TXTAIL's flags; SETHARDWARE ignored
     if not os.path.exists(FW_TNC):
         print('  (%s absent, skipped)' % FW_TNC)
@@ -5090,6 +5127,7 @@ INDEPENDENT = [
     ('TNC build: the AX.25 frame inside FX.25 (tag 2, an abort in it) reaches the host', test_tnc_fx25_plain),
     ('TNC build: connected-mode frames (SABM, I, RR) reach the host', test_tnc_connected),
     ('TNC build: KISS over Bluetooth (UART0) both ways with BLUETOOTH on', test_tnc_bluetooth),
+    ('TNC build: over Bluetooth a 316 B frame whole, resting after every 128 bytes', test_tnc_bluetooth_paced),
     ('TNC build: the speaker stays on across a send', test_tnc_speaker_after_tx),
     ('TNC build: LIGHT\'s timeout, the first key only lights, a signal keeps it lit', test_tnc_backlight),
     ('TNC build: hold * locks every key, side keys and flashlight too', test_tnc_key_lock),

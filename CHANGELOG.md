@@ -17,6 +17,9 @@ starts with its part of this list.
   too weak to decode, and while SQUELCH (any setting, S-meter or 0) sees a carrier. No hardware
   change: it hears the audio through the beep's pin. The TNC firmware has no FM radio, weather,
   SCOPE or FREQ FIND, to make room. The manual's TNC page has the details.
+- Over Bluetooth the TNC hands the app packets of every length whole. Those over about 264 bytes
+  used to come through cut short or not at all: the radio now pauses briefly every 128 bytes, so the
+  Bluetooth module keeps up.
 - The TNC has its own menu item, 31 TNC, so **menu items 31-52 are now 32-53** in every firmware:
   PC LINK is **4** **7**, REMOTE **4** **8**, BLUETOOTH **4** **9**, VERSION **5** **3**. Update
   `tdh3` together with the firmware: an older `tdh3 settings set` finds the numbers moved and stops

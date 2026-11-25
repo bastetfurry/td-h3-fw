@@ -180,6 +180,20 @@ static __xdata uint8_t src[7];              // the last one's source address (by
 
 #define KOUT(c) do { if (tnc_bt) SBUF0 = (c); else SBUF1 = (c); } while (0)
 static void hw_start(void);
+
+// The Bluetooth module buffers about 264 bytes and sends them on once UART0 goes quiet; it takes
+// them in faster than it gets them over the air, so a longer run of bytes overflows it (frames over
+// 264 B came through cut short or not at all). After every BT_PACE bytes UART0 rests 5-10 ms (two
+// Timer0 ticks; t0_isr resumes it), and the module sends on what it has. Every length then comes
+// through whole, for 6 % of 9600's rate.
+#define BT_PACE 128
+static __xdata uint8_t bt_cnt;              // bytes since the last rest
+volatile __data uint8_t bt_wait;            // ticks of rest left: t0_isr counts them down
+void tnc_bt_ti(void)                        // from uart0_isr: its last byte out
+{
+    if (++bt_cnt == BT_PACE) { bt_cnt = 0; bt_wait = 2; return; }
+    kiss_next();
+}
 void kiss_next(void)                        // from uart1_isr or uart0_isr (the port's), its last byte out
 {
     uint8_t c;
@@ -676,7 +690,7 @@ void tnc_mode(void)
     floor_reset();
     a_n = 0;
     k_state = 0; q_head = q_n = 0; q_bytes = 0; hw_n = 0;
-    k_out = 0; k_count = seen = 0;
+    k_out = 0; k_count = seen = 0; bt_cnt = bt_wait = 0;
 
     // P4.6 from beep output to audio input: C47 to the low side, then up to the input's threshold.
     beep_left = 0; TCON &= ~0x40; BEEP = 0;
@@ -758,6 +772,7 @@ void tnc_mode(void)
     TCON &= ~0xC0;
     for (uint16_t t = now(); k_out && (uint16_t)(now() - t) < 100; ) WDT_KICK();   // the frame on its way
                                             // to the host out first (95 ms at most; 380 ms at 9600)
+    bt_wait = 0;                            // no rest's end to send on into PC LINK
     IE &= ~0x10; SCON0 &= ~0x03;            // UART0 back to PC LINK's polling
     tnc_run = 0;
     q_n = 0;                                // what the host queued and never went out
