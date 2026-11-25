@@ -4518,27 +4518,26 @@ def test_tnc_build_menu(cpu):              # TNC build: its own item 31 and key 
     keys(cpu, ['EXIT'])
 
 
-def test_tnc_tx(cpu):                      # TNC: a frame from the host goes out on the air, bit for bit
-    if not os.path.exists(FW_TNC):
-        print('  (%s absent, skipped)' % FW_TNC)
-        return
-    cpu = boot(FW_TNC)
+def tnc_tx_check(cpu, narrow):              # a frame from the host on the air, bit for bit, at the slot's bandwidth
     tnc_open(cpu, '144800')
     frame, kiss = kiss_frame(b'>TD-H3 TNC TX test \xc0\xdb escaped')   # FEND and FESC inside: KISS escapes
+    l1, l2, bw = (112, 127, 0x4848) if narrow else (80, 96, 0x3628)
     start = len(cpu.bk.writes)
     cpu.uart_in.extend(kiss)
     ok = cpu.run(400_000_000, until=lambda: any(w == (0x70, 0) for w in cpu.bk.writes[start:]))
     assert ok, 'never keyed up and down'
     assert (0x30, 0xC1FE) in cpu.bk.writes[start:], 'transmitter on'
-    i = cpu.bk.writes.index((0x70, 0x8000 | 0x60 << 8), start)   # tone 1 on
+    i = cpu.bk.writes.index((0x70, 0x8000 | l1 << 8), start)   # tone 1 on, 1200 Hz's gain
     w = cpu.bk.writes[:i]
     last = lambda r, w=w: next(v for q, v in reversed(w) if q == r)
     assert last(0x48) == 0xB2A8 and last(0x2B) == 0, 'TX with the receive tweaks on'
     assert last(0x30) == 0xC3FA, 'TX link for tones: AF DAC on, mic ADC off (REG_30 C3FA)'
-    assert last(0x43) == 0x3628, 'TNC: sends wide'
+    assert last(0x43) == bw, 'TNC: sends %s, as the slot (REG_43 %04X)' % ('narrow' if narrow else 'wide', last(0x43))
     assert last(0x19) == 0x9041, 'TX AGC off for the tones (REG_19 bit 15)'
     assert last(0x51) == 0, 'no CTCSS/DCS under the AFSK (REG_51 0)'
     tx_end = cpu.bk.writes.index((0x70, 0), i)
+    gains = {v >> 8 & 0x7F for q, v in cpu.bk.writes[i:tx_end] if q == 0x70}
+    assert gains == {l1, l2}, 'tone gains %s, not 1200 Hz %d and 2200 Hz %d' % (sorted(gains), l1, l2)
     assert all(v == 0x3B20 for q, v in cpu.bk.writes[i:tx_end] if q == 0x50) and \
         last(0x50, cpu.bk.writes[:tx_end]) == 0x3B20, 'TX audio muted (REG_50 BB20) while the tones play: a silent carrier'
     got, nbits = tnc_air_frames(cpu, start)
@@ -4547,6 +4546,23 @@ def test_tnc_tx(cpu):                      # TNC: a frame from the host goes out
     assert cpu.bk.regs.get(0x48) == 0xB3FF and cpu.bk.regs.get(0x2B) == 0x0100, 'TNC receive settings back'
     assert cpu.bk.regs.get(0x43) == 0x4848, 'TNC: narrow again after sending'
     keys(cpu, ['EXIT'])
+
+
+def test_tnc_tx(cpu):                      # TNC: a frame from the host goes out on the air, bit for bit; a wide slot sends wide
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    tnc_tx_check(boot(FW_TNC), narrow=False)
+
+
+def test_tnc_tx_narrow(cpu):               # TNC: a narrow slot sends narrow, with narrow's tone gains
+    if not os.path.exists(FW_TNC):
+        print('  (%s absent, skipped)' % FW_TNC)
+        return
+    cpu = boot(FW_TNC)
+    menu(cpu, 'BW', ['UP', 'EXIT'])        # the slot NARROW
+    assert cpu.bk.regs[0x43] == 0x4848, hex(cpu.bk.regs[0x43])
+    tnc_tx_check(cpu, narrow=True)
 
 
 def test_tnc_tx_fcs_unshared(cpu):         # TNC: the FCS of a frame to send is computed with sampling off
@@ -5060,6 +5076,7 @@ INDEPENDENT = [
     ('menu: an item the build hasn\'t got (TNC) is skipped and refused, numbers kept', test_menu_hidden_items),
     ('TNC build: item 31 and key 8 open the TNC; FM RADIO, WEATHER, WX ALERT hidden; no weather look', test_tnc_build_menu),
     ('TNC build: a KISS frame from the host goes out on the air bit for bit', test_tnc_tx),
+    ('TNC build: a narrow slot sends narrow, with its own tone gains', test_tnc_tx_narrow),
     ('TNC build: a frame\'s FCS is computed with sampling off (crc_byte unshared)', test_tnc_tx_fcs_unshared),
     ('TNC build: 4 frames from the host go out in order in one key-up, a 5th is dropped', test_tnc_tx_queue),
     ('TNC build: a 316 B frame (AX.25\'s full length) reaches the host whole', test_tnc_long_frame_rx),

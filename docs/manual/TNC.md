@@ -72,8 +72,9 @@ Flash the normal firmware again the same way, or with `tdh3 update`, to get the 
 
 1. Tune the selected slot to the packet frequency: **144.800 MHz** for APRS in Europe, **144.390**
    in North America.
-2. **BANDWIDTH** (item 5): **WIDE** for sending. APRS stations use wide; on narrow the radio's
-   transmit audio filter cuts the 2200 Hz tone and other stations decode fewer of your packets.
+2. **BANDWIDTH** (item 5): as the other stations on the frequency, the TNC sends the way the slot
+   says. APRS in Europe is mostly **WIDE**; a packet net on narrow channels wants **NARROW**, where a
+   wide signal is too much for the other stations' receivers. Receiving is narrow either way.
 3. **POWER** (item 9) as low as gets you heard: a packet is short, but the TNC may send often.
 4. **TX BANDS** (item 13) must include the band, as for talking: the TNC transmits only where PTT
    would (see [Transmitting](Transmitting)).
@@ -140,7 +141,10 @@ and scanning pause, and AUTO OFF doesn't switch it off. They carry on when you l
   reaches it through `tools/ble_kiss.py`, which offers it as KISS on TCP port 8101 for direwolf's
   clients, Xastir or QtTermTCP. Bluetooth doesn't drop when the radio transmits, as the cable can.
   Phone apps need to support a plain BLE serial link (service FF00, write FF02, notify FF01);
-  APRSdroid's Bluetooth TNC support may not cover it.
+  APRSdroid's Bluetooth TNC support may not cover it. Packets heard reach the app whole up to
+  264 bytes (248 of text): longer ones come through cut short or not at all, as the module passes
+  data on slower than the radio hands it over. For connected mode, set the app's packet length
+  (PACLEN) to 200 or so.
 - **The USB link can drop when the radio transmits.** Radio energy on the cable resets the USB
   chip; the app then loses the connection. A clip-on ferrite on the cable at the radio end (the
   cable looped through it 2 to 4 times), the antenna away from the cable, and a short cable help.
@@ -148,8 +152,8 @@ and scanning pause, and AUTO OFF doesn't switch it off. They carry on when you l
   chip, so the TNC hears the audio through a pin meant for the beep (see
   [docs/HARDWARE.md](https://github.com/limehawk/td-h3-fw/blob/main/docs/HARDWARE.md), "P4.6 as an
   audio input"). Strong, clean packets decode well; weak or distorted ones are missed more often
-  than by a dedicated TNC. For now it hears best with the slot on **NARROW**, while sending needs
-  **WIDE**.
+  than by a dedicated TNC. It always receives narrow, whatever the slot says: on wide the audio at
+  that pin is about half, too little.
 - **Up to 4 packets wait to go out.** The radio sends all of them in one transmission, one after
   another, so a connected-mode app (a BBS or node client) can use a window (MAXFRAME) of up to 4.
   A packet the app sends while 4 wait is dropped (`DROP`). A packet may be AX.25's longest, 330

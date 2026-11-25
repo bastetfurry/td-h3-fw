@@ -12,7 +12,7 @@ starts with its part of this list.
   up to AX.25's full 330 bytes. The screen shows the frequency (type a new one, or step with **UP**
   / **DOWN**), the last station heard and its signal, and the send state and queue in fixed places;
   the lights show packets coming in, decoded, lost and sent. Up to 4 packets wait to go out in one
-  transmission (MAXFRAME 4). It takes KISS TXDELAY, P, SLOTTIME, TXTAIL, FULLDUPLEX and ACKMODE and
+  transmission (MAXFRAME 4). It sends wide or narrow as the slot says, and always receives narrow. It takes KISS TXDELAY, P, SLOTTIME, TXTAIL, FULLDUPLEX and ACKMODE and
   answers Dire Wolf's `TXBUF:` and `TNC:` queries. It waits while a packet is coming in, even one
   too weak to decode, and while SQUELCH (any setting, S-meter or 0) sees a carrier. No hardware
   change: it hears the audio through the beep's pin. The TNC firmware has no FM radio, weather,

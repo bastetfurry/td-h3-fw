@@ -39,10 +39,17 @@
 
 #define BIT_RELOAD (65536u - 3333u)         // 1200 Hz: 3333 1/3 counts, a count more every third bit
 #define STOPPED 2                           // counts Timer1 misses while its reload is added (stopped)
-#define TX_LEVEL 0x60                       // tone 1's gain (REG_70 14:8): 0x50 (DTMF's) was ~2 dB under other APRS radios
-#define TX_TWIST 3                          // 2200 Hz at level x 11/8 (0x7F, the most): on the air a KISS TNC decoded
-                                            // twist -2 2 of 15, 0 13/15, +2 and +4 15/15, +3 20/20
-#define TX_GAIN2 (TX_LEVEL * (8 + TX_TWIST) / 8 > 127 ? 127 : TX_LEVEL * (8 + TX_TWIST) / 8)   // 2200 Hz's
+// Tone 1's gain (REG_70 14:8) for 1200 and 2200 Hz, per the slot's bandwidth; 2200 Hz a little stronger
+// (twist: a KISS TNC on the other end decoded twist -2 2 of 15, 0 13/15, +2 to +4 all). Measured on an
+// RT-890 TNC that records its audio input (2026-11-25): on wide, a 2200 Hz gain over 96 overloads the
+// tone path: the tone collapses (-8 dB against 1200 Hz) and the carrier steps at every tone swap, a
+// square wave at the swap rate that receivers with a high-pass shrug off and the RT-890 (none) can't
+// decode (0 of 3 at 96/104 up to 96/127, 3 of 3 at 96/96, 80/96, 72/96, 64/85). On narrow 127 is clean.
+// The levels below put both tones at about a UV-K5's on that receiver.
+#define TX_L1_WIDE   80                     // wide: 1200 Hz
+#define TX_L2_WIDE   96                     //       2200 Hz, the most before the overload (+1.6 dB)
+#define TX_L1_NARROW 112                    // narrow: 1200 Hz
+#define TX_L2_NARROW 127                    //         2200 Hz (+1.1 dB)
 #define FEND 0xC0
 #define FESC 0xDB
 
@@ -108,6 +115,7 @@ static void reload(uint16_t r)              // the next overflow r counts after 
 
 // ---- the bits out, from Timer1 at 1200 Hz ----
 static __xdata uint8_t tx_phase, tx_left, tx_bit, tx_ones, tx_tone, tx_frac;
+static __xdata uint8_t tx_l1, tx_l2;        // this key-up's tone gains (the slot's bandwidth)
 static __xdata uint8_t tx_tail;             // flags after the last frame: TXTAIL's, 3 at least
 static __xdata uint16_t tx_i, tx_n;         // the frame's next byte; its bytes with the FCS
 static __xdata uint8_t * __xdata tx_p;      // the frame going out: txq[q_head]
@@ -152,7 +160,7 @@ static void tx_tick(void)
     if (!b) {                               // NRZI: a 0 swaps the tones, each at its own gain (twist)
         tx_tone ^= 1;
         bk_write(0x71, tx_tone ? TONE_HZ(2200) : TONE_HZ(1200));
-        bk_write(0x70, 0x8000 | (uint16_t)(tx_tone ? TX_GAIN2 : TX_LEVEL) << 8);
+        bk_write(0x70, 0x8000 | (uint16_t)(tx_tone ? tx_l2 : tx_l1) << 8);
     }
 }
 
@@ -474,10 +482,12 @@ static void status(uint8_t busy)            // the send side: frames queued, the
     tx_line();
 }
 
-// Receive narrow, send wide, whatever the slot says (REG_43, bk_mode's two values): on wide the FM
-// detector's audio for the same deviation is about half, too little for P4.6 (0 of 4 heard on the
-// radio); on narrow the TX audio low-pass (~2.5 kHz) cuts the 2200 Hz tone (5-6 of 10 decoded by
-// another TNC, against 7 on wide). radio_tx doesn't write REG_43, so send() sets it just before.
+// Receive narrow whatever the slot says (REG_43, bk_mode's two values): on wide the FM detector's audio
+// for the same deviation is about half, too little for P4.6 (0 of 4 heard on the radio). Send as the slot
+// says, wide or narrow, each with its tone gains (TX_L1_WIDE...): radio_tx doesn't write REG_43, so send()
+// sets it just before. (It used to send wide always, for a narrow TX low-pass thought to cut 2200 Hz; on
+// the RT-890's recordings narrow's 2200 Hz is there, and wide's deviation is too much for a narrow
+// receiver.) NARROW kHz 6.25 changes only the receive filter (bits 14:12): narrow sends as 12.5.
 #define BW_NARROW 0x4848                    // bk_mode: narrow, 12.5 kHz
 #define BW_WIDE   0x3628
 
@@ -543,7 +553,9 @@ static void send(void)                      // the queued frames on the air, if 
     tx_p = txq[q_head]; tx_i = 0; tx_n = with_fcs(q_head);
     tx_nlen = tx_cnt = 0;
     tx_done = 0;
-    bk_write(0x43, BW_WIDE);                // send wide (rx_on: why)
+    bk_write(0x43, ch.narrow ? BW_NARROW : BW_WIDE);   // the slot's bandwidth (rx_on: why)
+    tx_l1 = ch.narrow ? TX_L1_NARROW : TX_L1_WIDE;
+    tx_l2 = ch.narrow ? TX_L2_NARROW : TX_L2_WIDE;
     bk_write(0x48, 0xB2A8);                 // the receive tweaks off first: transmitting with them (REG_2B
     bk_write(0x2B, 0);                      // 0x0100, REG_48 B3FF) put a silent carrier on the air; DTMF's state
     tx = 1; lights(0);                      // the backlight on while sending, LIGHT's time after (main.c)
@@ -563,7 +575,7 @@ static void send(void)                      // the queued frames on the air, if 
         bk_write(0x19, 0x9041);
         bk_write(0x51, 0);
         bk_write(0x71, TONE_HZ(1200));
-        bk_write(0x70, 0x8000 | (uint16_t)TX_LEVEL << 8);   // tone 1 on
+        bk_write(0x70, 0x8000 | (uint16_t)tx_l1 << 8);   // tone 1 on
         delay_ms(50);
         bk_write(0x50, 0x3B20);
         tnc_tx = 1;
